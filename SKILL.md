@@ -7,7 +7,7 @@ description: "设计或编写软件功能测试用例时使用本 skill。适用
 
 从产品需求设计功能测试用例。按下方路由**只读当前任务需要的文件**，不要一次读完 `references/`。
 
-质量、范围声明、方法/维度/数量以 `references/functional-testcase-design.md` 为单一事实源。
+质量、范围声明、方法/维度/覆盖以 `references/functional-testcase-design.md` 为单一事实源。
 
 ---
 
@@ -45,19 +45,9 @@ description: "设计或编写软件功能测试用例时使用本 skill。适用
 | 精简 / 只要用例标题 / 用例清单 | 仅标题级 | 固定 XMind + `references/testcase-xmind-guideline.md` | 到 `#####` |
 | 测试要点 / 测试点 | 测试要点 | `references/testpoint-analysis-guideline.md`（飞书取数见 functional 第二节） | 到 `-` |
 
-**勾选后的判定**：
+勾选仅标题级时最常见失败：写成带 `前置条件` / `###### 测试步骤` / `###### 预期结果` 的完整 Markdown。要点输出后停步，**不**自动写用例。**@ 显式引用**某 reference 时以该文件为准。
 
-- XMind 仅标题级 → 读 xmind 指南，**勿**展开前置/步骤/预期。
-- Excel/CSV → 完整版。
-- XMind 完整可执行 → 完整版，仍走 xmind 指南的完整形态小节。
-- 「测试要点 / 测试点」→ 输出后停步等确认，**不**自动接着写用例。
-- **@ 显式引用**本 skill 内某个 reference 文件 → 以被引用文件为准。
-
-未勾选就开写时最常见失败：把用例写成带 `前置条件` / `###### 测试步骤` / `###### 预期结果` 的完整 Markdown，或未问格式就按 XMind 交稿。
-
-**测试要点**：固定 XMind 兼容 Markdown（`testcases/{需求名}-测试要点.md`）。
-
-**不做闭环**：本 skill 只做单次设计 / 排版 / 测试要点。不要在这里自造多 Agent 评审修复循环。
+**不做闭环**：只做单次设计 / 排版 / 要点，不要自造多 Agent 评审修复循环。
 
 ---
 
@@ -80,7 +70,7 @@ description: "设计或编写软件功能测试用例时使用本 skill。适用
 
 | 文件 | 作用 | 何时读 |
 |------|------|--------|
-| `references/functional-testcase-design.md` | 核心规则（来源获取/方法/维度/数量/完整结构） | 格式勾选之后写用例时；测试要点遇到飞书来源时读第二节 |
+| `references/functional-testcase-design.md` | 核心规则（来源获取/方法/维度/覆盖） | 格式勾选之后写用例时；测试要点遇到飞书来源时读第二节 |
 | `references/testcase-xmind-guideline.md` | XMind 格式；勾选仅标题级时不到 `######` | 用户勾选 XMind 后 |
 | `references/testcase-excel-guideline.md` | Excel（CSV 11 列） | 用户勾选 Excel/CSV 后 |
 | `references/testpoint-analysis-guideline.md` | 测试要点 | 用户勾选测试要点后 |
