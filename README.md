@@ -45,11 +45,13 @@ git clone https://github.com/zouaiyong/testcase-design.git "$env:USERPROFILE\.cu
 ```text
 testcase-design/
 ├── SKILL.md
-└── references/
-    ├── functional-testcase-design.md
-    ├── testcase-xmind-guideline.md
-    ├── testcase-excel-guideline.md
-    └── testpoint-analysis-guideline.md
+├── references/
+│   ├── functional-testcase-design.md
+│   ├── testcase-xmind-guideline.md
+│   ├── testcase-excel-guideline.md
+│   └── testpoint-analysis-guideline.md
+└── scripts/
+    └── validate_testcase.py        # 产物结构自检；--fix-bom 给 CSV 补 BOM
 ```
 
 安装后新开一轮对话（或确认 Cursor 已刷新 skills）。触发词示例：「写测试用例」「按这个需求出用例」「把 PRD 转成用例」「只要测试要点」。即使用户只说「写用例」「出个用例」「按这个需求测一下」且没提 XMind/Excel，Agent 也应使用本 skill。
@@ -188,11 +190,13 @@ testcase-design/
 ```text
 .
 ├── SKILL.md                                      # 入口：何时用、先勾选格式、产物路由
-└── references/
-    ├── functional-testcase-design.md             # 质量单一事实源：拆解 / 方法 / 维度 / 覆盖 / 标题规范
-    ├── testcase-xmind-guideline.md               # XMind 兼容 Markdown 层级（精简 / 完整）
-    ├── testcase-excel-guideline.md               # CSV 11 列物理格式
-    └── testpoint-analysis-guideline.md           # 测试要点写法与三重扫描
+├── references/
+│   ├── functional-testcase-design.md             # 质量单一事实源：拆解 / 方法 / 维度 / 覆盖 / 标题规范
+│   ├── testcase-xmind-guideline.md               # XMind 兼容 Markdown 层级（精简 / 完整）
+│   ├── testcase-excel-guideline.md               # CSV 11 列物理格式
+│   └── testpoint-analysis-guideline.md           # 测试要点写法与三重扫描
+└── scripts/
+    └── validate_testcase.py                      # 产物结构自检；--fix-bom 给 CSV 补 BOM
 ```
 
 维护约定：质量、范围声明、标题字数以 `functional-testcase-design.md` 为准；排版分别遵 xmind / excel / testpoint 指南。Agent 应按任务按需读取，不要一次读完 `references/`。

@@ -47,6 +47,8 @@ description: "设计或编写软件功能测试用例时使用本 skill。适用
 
 勾选精简版时最常见失败：仍写 `前置条件` / `###### 测试步骤`，或漏写 `###### 预期结果`（只剩标题）。要点输出后停步，**不**自动写用例。**@ 显式引用**某 reference 时以该文件为准。
 
+**评审已有用例**：用户让「评审 / 检查」已写好的用例时，先跑 `scripts/validate_testcase.py` 做结构校验，再按 `references/functional-testcase-design.md` 第六章「输出前核对」与对应格式指南逐条人工核对，输出问题清单而非直接改稿。
+
 **不做闭环**：只做单次设计 / 排版 / 要点，不要自造多 Agent 评审修复循环。
 
 ---
@@ -62,6 +64,7 @@ description: "设计或编写软件功能测试用例时使用本 skill。适用
 - 禁止拿到需求直接写用例：先勾选格式，再按 functional 做需求拆解；不完整则提示补全。
 - 范围声明（有内容才写）、覆盖：遵 `references/functional-testcase-design.md`。同一需求的用例写入**一份文件**，禁止因条数拆成多份。
 - **生成文件**：用户指定了输出目录时写到该目录（不必再镜像一份到 `testcases/`）。用户要求 `.xmind` / `.csv` 且仓库里已有转换脚本时，环境允许则运行；确认无 traceback、输出存在且非空，并抽查根节点 / 列结构与源 Markdown 一致。没有脚本或无法跑时说明原因，完成结构与覆盖自检即可，不要为了转格式去装新依赖或编写转换器。
+- **自检**：产物写完后，环境有 Python 时运行 `python scripts/validate_testcase.py <产物文件>` 做结构自检（XMind 层级 / 精简版合同 / 标题字数 / 编号连续；CSV 的 BOM / 11 列 / 优先级 / 实际结果列；要点的优先级标注与风险章节）。有 FAIL 项先修好再交付。注意：多数编辑器写出的 CSV **不带 BOM**，Excel 打开会乱码，用 `python scripts/validate_testcase.py --fix-bom <csv>` 补齐。
 - **改转换脚本**：`python -m py_compile`，并用仓库内已有样例跑通主路径；新增第三方依赖须说明安装方式。
 
 ---
@@ -74,3 +77,4 @@ description: "设计或编写软件功能测试用例时使用本 skill。适用
 | `references/testcase-xmind-guideline.md` | XMind 格式；精简版无前置/步骤、须有预期 | 用户勾选 XMind 后 |
 | `references/testcase-excel-guideline.md` | Excel（CSV 11 列） | 用户勾选 Excel/CSV 后 |
 | `references/testpoint-analysis-guideline.md` | 测试要点 | 用户勾选测试要点后 |
+| `scripts/validate_testcase.py` | 产物结构自检；`--fix-bom` 给 CSV 补 BOM | 产物写完后、交付前 |
