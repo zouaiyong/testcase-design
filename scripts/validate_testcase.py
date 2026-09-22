@@ -6,16 +6,15 @@
     python scripts/validate_testcase.py --fix-bom <csv>     # 给 CSV 补 UTF-8 BOM
 
 自动识别产物类型：
-- .csv                → Excel 完整版合同（11 列 / BOM / 优先级 / 实际结果 / 标题字数 / 编号连续）
-- .md 含 TC 编号      → XMind 用例（层级不跳级 / 维度标准名 / 标题 ≤21 汉字 / 编号连续；
-                        含「测试步骤」或「前置条件」按完整版校验，否则按精简版校验）
-- .md 不含 TC 编号    → 测试要点（要点行【高/中/低】/ 风险与回归提示 / 非步骤化）
+- .csv                → Excel 完整版合同（11 列 / BOM / 优先级 / 实际结果 / 标题非空且不含 TC·P0 / 编号连续）
+- .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 无 TC 与（P0） /
+                        每条用例下有预期明细；含「测试步骤」或「前置条件」按完整版校验，否则按精简版校验）
+- .md 不含「预期结果」标题 → 测试要点（要点行【高/中/低】/ 风险与回归提示 / 非步骤化）
 
 校验全部通过退出码为 0，否则为 1 并逐条打印 FAIL 原因。
 """
 import csv
 import io
-import os
 import re
 import sys
 
@@ -23,10 +22,8 @@ STD_DIMS = ["功能测试", "边界测试", "异常测试", "权限测试", "安
             "并发测试", "集成测试", "性能测试", "兼容性测试", "用户体验测试"]
 CSV_HEADER = ["用例编号", "功能模块", "功能测试点", "验证维度", "用例标题", "优先级",
               "前置条件", "测试步骤", "预期结果", "实际结果", "备注"]
-
-
-def cjk_len(s):
-    return len(re.findall(r"[\u4e00-\u9fff]", s))
+EXPECTED = "预期结果"
+STEP_TITLES = {"测试步骤：", "测试步骤"}
 
 
 def read_raw(path):
@@ -41,6 +38,37 @@ def report(results):
             failed += 1
     print(f"\n{len(results) - failed}/{len(results)} 项通过")
     return 1 if failed else 0
+
+
+def parse_headings(lines):
+    out = []
+    for i, ln in enumerate(lines):
+        m = re.match(r"^(#+)\s+(.*?)\s*$", ln)
+        if m:
+            out.append((i, len(m.group(1)), m.group(2).strip()))
+    return out
+
+
+def next_heading_line(headings, idx, n_lines):
+    if idx + 1 < len(headings):
+        return headings[idx + 1][0]
+    return n_lines
+
+
+def direct_children(headings, idx):
+    _, lv, _ = headings[idx]
+    children = []
+    for j in range(idx + 1, len(headings)):
+        _, lv2, _ = headings[j]
+        if lv2 <= lv:
+            break
+        if lv2 == lv + 1:
+            children.append(j)
+    return children
+
+
+def list_items(lines, start, end):
+    return [ln.strip() for ln in lines[start:end] if re.match(r"^\s*-\s+\S", ln)]
 
 
 def validate_csv(path, results):
@@ -61,8 +89,11 @@ def validate_csv(path, results):
     results.append((not bad_pri, f"优先级只有 高/中/低（异常：{bad_pri[:3]}）"))
     bad_act = [r[0] for r in ok11 if r[9].strip() not in ("—",)]
     results.append((not bad_act, f"实际结果列填 —（异常：{bad_act[:3]}）"))
-    over = [f"{r[0]}:{r[4]}({cjk_len(r[4])}字)" for r in ok11 if cjk_len(r[4]) > 21]
-    results.append((not over, f"用例标题 ≤21 个汉字（超长：{over[:3]}）"))
+    empty_title = [r[0] for r in ok11 if not r[4].strip()]
+    results.append((not empty_title, f"用例标题非空（异常：{empty_title[:3]}）"))
+    titled_tc = [f"{r[0]}:{r[4]}" for r in ok11
+                 if re.search(r"TC\d", r[4]) or re.search(r"（P[012]）", r[4])]
+    results.append((not titled_tc, f"标题不含 TC 编号或（P0/P1/P2）（异常：{titled_tc[:3]}）"))
     empty = [r[0] for r in ok11 if not r[6].strip() or not r[7].strip() or not r[8].strip()]
     results.append((not empty, f"前置条件/测试步骤/预期结果均非空（异常：{empty[:3]}）"))
     bad_dim = sorted({r[3].strip() for r in ok11} - set(STD_DIMS))
@@ -75,51 +106,85 @@ def validate_csv(path, results):
 
 def validate_xmind(text, results):
     lines = text.splitlines()
-    headings = [(len(re.match(r"^(#+)", ln).group(1)), ln.strip())
-                for ln in lines if re.match(r"^#+\s", ln)]
+    headings = parse_headings(lines)
+    n_lines = len(lines)
+
+    h1 = [t for _, lv, t in headings if lv == 1]
+    results.append((len(h1) == 1, f"全文恰好一个 # 中心主题（实际 {len(h1)} 个）"))
+
     prev, skip = 0, []
-    for lv, t in headings:
+    for _, lv, t in headings:
         if prev and lv > prev + 1:
             skip.append(t[:40])
         prev = lv
     results.append((not skip, f"标题层级不跳级（跳级：{skip[:3]}）"))
-    h4 = [t.lstrip("#").strip() for lv, t in headings if lv == 4]
-    bad4 = [d for d in h4 if d not in STD_DIMS]
-    results.append((not bad4, f"#### 均为 11 个标准维度名（异常：{bad4[:3]}）"))
-    results.append(("功能测试" in h4, "功能测试维度存在"))
-    h5 = [t for lv, t in headings if lv == 5]
-    bad5 = [t for t in h5 if not re.match(r"^#####\s+TC\S*\d+\s+.+（P[012]）\s*$", t)]
-    results.append((bool(h5) and not bad5, f"##### 均为 TC编号 标题（P优先级）（异常：{bad5[:3]}）"))
-    over = []
-    for t in h5:
-        m = re.match(r"^#####\s+TC\S*\d+\s+(.+?)（P[012]）\s*$", t)
-        if m and cjk_len(m.group(1)) > 21:
-            over.append(f"{m.group(1)}({cjk_len(m.group(1))}字)")
-    results.append((not over, f"标题 ≤21 个汉字（超长：{over[:3]}）"))
-    nums = [int(m.group(2)) for t in h5
-            for m in [re.match(r"^#####\s+TC(\d+)-(\d+)", t)] if m]
-    if nums:
-        results.append((nums == list(range(1, len(nums) + 1)), f"TC 编号连续不跳号（{len(nums)} 条）"))
+
+    dim_heads = [t for _, _, t in headings if t in STD_DIMS]
+    results.append((not dim_heads, f"不把 11 个维度名写成标题节点（异常：{dim_heads[:3]}）"))
+
+    modules = [t for _, lv, t in headings if lv == 2 and t != "范围声明"]
+    results.append((bool(modules), "存在业务 ## 模块（范围声明不算）"))
+    results.append((any(lv == 3 for _, lv, _ in headings), "存在 ### 功能点"))
+
+    cases = []
+    expected_idx = []
+    for i, (_, lv, t) in enumerate(headings):
+        child_titles = [headings[j][2] for j in direct_children(headings, i)]
+        if EXPECTED in child_titles:
+            cases.append(i)
+        if t.rstrip("：") == EXPECTED:
+            expected_idx.append(i)
+
+    results.append((bool(cases), f"至少有一条用例（标题下直接挂「{EXPECTED}」）（{len(cases)} 条）"))
+
+    bad_case = []
+    for i in cases:
+        _, _, t = headings[i]
+        if t.rstrip("：") == EXPECTED or t in STEP_TITLES or t == "范围声明" or t in STD_DIMS:
+            bad_case.append(t[:40])
+        elif re.search(r"TC\s*\d", t) or re.search(r"（P[012]）", t):
+            bad_case.append(t[:40])
+    results.append((not bad_case, f"用例标题不含 TC 编号、（P0）或维度名（异常：{bad_case[:3]}）"))
+
+    h_expected = [t for _, _, t in headings if t.rstrip("：") == EXPECTED]
+    bad_exp_name = [t for t in h_expected if t != EXPECTED]
+    results.append((not bad_exp_name,
+                    f"预期标题须恰好为「{EXPECTED}」（异常：{bad_exp_name[:3]}）"))
+
+    missing_detail = []
+    for i in expected_idx:
+        start = headings[i][0] + 1
+        end = next_heading_line(headings, i, n_lines)
+        if not list_items(lines, start, end):
+            parent = "?"
+            for c in reversed(cases):
+                if headings[c][0] < headings[i][0]:
+                    parent = headings[c][2][:40]
+                    break
+            missing_detail.append(parent)
+    results.append((not missing_detail, f"每个「{EXPECTED}」下至少一条 - 明细（缺失：{missing_detail[:3]}）"))
+
+    case_without_expected = []
+    for i in cases:
+        child_titles = [headings[j][2] for j in direct_children(headings, i)]
+        if EXPECTED not in child_titles:
+            case_without_expected.append(headings[i][2][:40])
+    results.append((not case_without_expected, f"用例标题的直接子标题是「{EXPECTED}」"))
+
+    h6 = [t for _, lv, t in headings if lv == 6]
+    bad6 = [t for t in h6 if t not in (EXPECTED, "测试步骤：")]
+    results.append((not bad6, f"###### 只用于 预期结果 / 测试步骤：（异常：{bad6[:3]}）"))
+
     full = ("测试步骤" in text) or ("前置条件" in text)
-    h6 = [t.lstrip("#").strip() for lv, t in headings if lv == 6]
-    bad6 = [t for t in h6 if t not in ("预期结果", "测试步骤：")]
-    results.append((not bad6, f"###### 只用于 测试步骤：/预期结果（异常：{bad6[:3]}）"))
     if full:
         results.append((True, "检测到前置/步骤：按完整版校验"))
     else:
         results.append(("前置条件" not in text and "测试步骤" not in text,
                         "精简版不含前置条件/测试步骤"))
-    missing = []
-    for i, (lv, t) in enumerate(headings):
-        if lv == 5:
-            nxt = headings[i + 1] if i + 1 < len(headings) else None
-            if not (nxt and nxt[0] == 6 and "预期结果" in nxt[1]):
-                missing.append(t[:40])
-    results.append((not missing, f"每个 ##### 下都有 ###### 预期结果（缺失：{missing[:3]}）"))
 
 
 def validate_testpoint(text, results):
-    results.append((not re.search(r"TC\d", text), "要点不含 TC 编号"))
+    results.append((not re.search(r"^#+\s*预期结果\s*$", text, re.M), "要点不含「预期结果」标题"))
     results.append(("测试步骤" not in text, "要点不含测试步骤"))
     main_part = re.split(r"^##\s*风险与回归提示", text, flags=re.M)[0]
     pts = [ln for ln in main_part.splitlines() if re.match(r"^\s*-\s+", ln)]
@@ -153,7 +218,7 @@ def main():
         validate_csv(path, results)
     else:
         text = read_raw(path).decode("utf-8-sig", errors="replace")
-        if re.search(r"TC\d", text):
+        if re.search(r"^#+\s*预期结果\s*：?\s*$", text, re.M):
             validate_xmind(text, results)
         else:
             validate_testpoint(text, results)
