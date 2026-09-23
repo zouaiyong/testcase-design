@@ -6,8 +6,8 @@
     python scripts/validate_testcase.py --fix-bom <csv>     # 给 CSV 补 UTF-8 BOM
 
 自动识别产物类型：
-- .csv                → Excel 完整版合同（11 列 / BOM / 优先级 / 实际结果 / 标题非空且不含 TC·P0 / 编号连续）
-- .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 无 TC 与（P0） /
+- .csv                → Excel 完整版合同（11 列 / BOM / 优先级 / 实际结果 / 标题 ≤25 汉字且不含 TC·P0 / 编号连续）
+- .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 无 TC 与（P0） / 标题 ≤25 汉字 /
                         每条用例下有预期明细；含「测试步骤」或「前置条件」按完整版校验，否则按精简版校验）
 - .md 不含「预期结果」标题 → 测试要点（要点行【高/中/低】/ 风险与回归提示 / 非步骤化）
 
@@ -24,6 +24,11 @@ CSV_HEADER = ["用例编号", "功能模块", "功能测试点", "验证维度",
               "前置条件", "测试步骤", "预期结果", "实际结果", "备注"]
 EXPECTED = "预期结果"
 STEP_TITLES = {"测试步骤：", "测试步骤"}
+TITLE_MAX_CJK = 25
+
+
+def cjk_len(s):
+    return len(re.findall(r"[\u4e00-\u9fff]", s))
 
 
 def read_raw(path):
@@ -94,6 +99,8 @@ def validate_csv(path, results):
     titled_tc = [f"{r[0]}:{r[4]}" for r in ok11
                  if re.search(r"TC\d", r[4]) or re.search(r"（P[012]）", r[4])]
     results.append((not titled_tc, f"标题不含 TC 编号或（P0/P1/P2）（异常：{titled_tc[:3]}）"))
+    over = [f"{r[0]}:{r[4]}({cjk_len(r[4])}字)" for r in ok11 if cjk_len(r[4]) > TITLE_MAX_CJK]
+    results.append((not over, f"用例标题 ≤{TITLE_MAX_CJK} 个汉字（超长：{over[:3]}）"))
     empty = [r[0] for r in ok11 if not r[6].strip() or not r[7].strip() or not r[8].strip()]
     results.append((not empty, f"前置条件/测试步骤/预期结果均非空（异常：{empty[:3]}）"))
     bad_dim = sorted({r[3].strip() for r in ok11} - set(STD_DIMS))
@@ -145,6 +152,10 @@ def validate_xmind(text, results):
         elif re.search(r"TC\s*\d", t) or re.search(r"（P[012]）", t):
             bad_case.append(t[:40])
     results.append((not bad_case, f"用例标题不含 TC 编号、（P0）或维度名（异常：{bad_case[:3]}）"))
+
+    over = [f"{t}({cjk_len(t)}字)" for i in cases for _, _, t in [headings[i]]
+            if cjk_len(t) > TITLE_MAX_CJK]
+    results.append((not over, f"用例标题 ≤{TITLE_MAX_CJK} 个汉字（超长：{over[:3]}）"))
 
     h_expected = [t for _, _, t in headings if t.rstrip("：") == EXPECTED]
     bad_exp_name = [t for t in h_expected if t != EXPECTED]

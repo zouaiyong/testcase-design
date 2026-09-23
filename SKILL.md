@@ -64,7 +64,7 @@ description: "设计或编写软件功能测试用例时使用本 skill。适用
 - 禁止拿到需求直接写用例：先勾选格式，再按 functional 做需求拆解；不完整则提示补全。
 - 范围声明（有内容才写）、覆盖：遵 `references/functional-testcase-design.md`。同一需求的用例写入**一份文件**，禁止因条数拆成多份。
 - **生成文件**：用户指定了输出目录时写到该目录（不必再镜像一份到 `testcases/`）。用户要求 `.xmind` / `.csv` 且仓库里已有转换脚本时，环境允许则运行；确认无 traceback、输出存在且非空，并抽查根节点 / 列结构与源 Markdown 一致。没有脚本或无法跑时说明原因，完成结构与覆盖自检即可，不要为了转格式去装新依赖或编写转换器。
-- **自检**：产物写完后，环境有 Python 时运行 `python scripts/validate_testcase.py <产物文件>` 做结构自检（XMind：层级不跳级 / 无维度节点 / 无 TC 与优先级 / 每条有预期明细；CSV 的 BOM / 11 列 / 优先级 / 实际结果列；要点的优先级标注与风险章节）。有 FAIL 项先修好再交付。注意：多数编辑器写出的 CSV **不带 BOM**，Excel 打开会乱码，用 `python scripts/validate_testcase.py --fix-bom <csv>` 补齐。
+- **自检**：产物写完后，环境有 Python 时运行 `python scripts/validate_testcase.py <产物文件>` 做结构自检（XMind：层级不跳级 / 无维度节点 / 无 TC 与优先级 / 标题 ≤25 汉字 / 每条有预期明细；CSV 的 BOM / 11 列 / 优先级 / 实际结果列 / 标题 ≤25 汉字；要点的优先级标注与风险章节）。有 FAIL 项先修好再交付。注意：多数编辑器写出的 CSV **不带 BOM**，Excel 打开会乱码，用 `python scripts/validate_testcase.py --fix-bom <csv>` 补齐。
 - **改转换脚本**：`python -m py_compile`，并用仓库内已有样例跑通主路径；新增第三方依赖须说明安装方式。
 
 ---
