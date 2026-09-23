@@ -6,7 +6,7 @@
     python scripts/validate_testcase.py --fix-bom <csv>     # 给 CSV 补 UTF-8 BOM
 
 自动识别产物类型：
-- .csv                → Excel 完整版合同（11 列 / BOM / 优先级 / 实际结果 / 标题 ≤25 汉字且不含 TC·P0 / 编号连续）
+- .csv                → Excel 完整版合同（10 列 / BOM / 优先级 / 实际结果 / 标题 ≤25 汉字且不含 TC·P0）
 - .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 无 TC 与（P0） / 标题 ≤25 汉字 /
                         每条用例下有预期明细；含「测试步骤」或「前置条件」按完整版校验，否则按精简版校验）
 - .md 不含「预期结果」标题 → 测试要点（要点行【高/中/低】/ 风险与回归提示 / 非步骤化）
@@ -20,7 +20,7 @@ import sys
 
 STD_DIMS = ["功能测试", "边界测试", "异常测试", "权限测试", "安全测试", "数据一致性测试",
             "并发测试", "集成测试", "性能测试", "兼容性测试", "用户体验测试"]
-CSV_HEADER = ["用例编号", "功能模块", "功能测试点", "验证维度", "用例标题", "优先级",
+CSV_HEADER = ["功能模块", "功能测试点", "验证维度", "用例标题", "优先级",
               "前置条件", "测试步骤", "预期结果", "实际结果", "备注"]
 EXPECTED = "预期结果"
 STEP_TITLES = {"测试步骤：", "测试步骤"}
@@ -85,30 +85,30 @@ def validate_csv(path, results):
     if not rows:
         results.append((False, "文件为空或无数据行"))
         return
-    results.append((rows[0] == CSV_HEADER, f"表头为固定 11 列且顺序正确（实际：{rows[0]}）"))
+    results.append((rows[0] == CSV_HEADER, f"表头为固定 10 列且顺序正确（实际：{rows[0]}）"))
     data = rows[1:]
-    bad_len = [r[0] for r in data if len(r) != 11]
-    results.append((not bad_len, f"每行 11 个字段（异常行：{bad_len[:3]}）"))
-    ok11 = [r for r in data if len(r) == 11]
-    bad_pri = [r[0] for r in ok11 if r[5].strip() not in ("高", "中", "低")]
+    bad_len = [i for i, r in enumerate(data, start=2) if len(r) != 10]
+    results.append((not bad_len, f"每行 10 个字段（异常行：{bad_len[:3]}）"))
+    ok10 = [(i, r) for i, r in enumerate(data, start=2) if len(r) == 10]
+
+    def label(i, r):
+        return r[3].strip() or f"第{i}行"
+
+    bad_pri = [label(i, r) for i, r in ok10 if r[4].strip() not in ("高", "中", "低")]
     results.append((not bad_pri, f"优先级只有 高/中/低（异常：{bad_pri[:3]}）"))
-    bad_act = [r[0] for r in ok11 if r[9].strip() not in ("—",)]
+    bad_act = [label(i, r) for i, r in ok10 if r[8].strip() not in ("—",)]
     results.append((not bad_act, f"实际结果列填 —（异常：{bad_act[:3]}）"))
-    empty_title = [r[0] for r in ok11 if not r[4].strip()]
+    empty_title = [f"第{i}行" for i, r in ok10 if not r[3].strip()]
     results.append((not empty_title, f"用例标题非空（异常：{empty_title[:3]}）"))
-    titled_tc = [f"{r[0]}:{r[4]}" for r in ok11
-                 if re.search(r"TC\d", r[4]) or re.search(r"（P[012]）", r[4])]
+    titled_tc = [label(i, r) for i, r in ok10
+                 if re.search(r"TC\d", r[3]) or re.search(r"（P[012]）", r[3])]
     results.append((not titled_tc, f"标题不含 TC 编号或（P0/P1/P2）（异常：{titled_tc[:3]}）"))
-    over = [f"{r[0]}:{r[4]}({cjk_len(r[4])}字)" for r in ok11 if cjk_len(r[4]) > TITLE_MAX_CJK]
+    over = [f"{label(i, r)}({cjk_len(r[3])}字)" for i, r in ok10 if cjk_len(r[3]) > TITLE_MAX_CJK]
     results.append((not over, f"用例标题 ≤{TITLE_MAX_CJK} 个汉字（超长：{over[:3]}）"))
-    empty = [r[0] for r in ok11 if not r[6].strip() or not r[7].strip() or not r[8].strip()]
+    empty = [label(i, r) for i, r in ok10 if not r[5].strip() or not r[6].strip() or not r[7].strip()]
     results.append((not empty, f"前置条件/测试步骤/预期结果均非空（异常：{empty[:3]}）"))
-    bad_dim = sorted({r[3].strip() for r in ok11} - set(STD_DIMS))
+    bad_dim = sorted({r[2].strip() for _, r in ok10} - set(STD_DIMS))
     results.append((not bad_dim, f"验证维度均为 11 个标准名（异常：{bad_dim}）"))
-    nums = [int(m.group(1)) for r in ok11
-            for m in [re.match(r"TC(?:\d+-)?(\d+)$", r[0].strip())] if m]
-    results.append((bool(nums) and nums == list(range(1, len(nums) + 1)),
-                    f"用例编号连续不跳号（共 {len(nums)} 条）"))
 
 
 def validate_xmind(text, results):

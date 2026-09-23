@@ -29,7 +29,7 @@ description: "从需求设计软件功能测试用例，交付 XMind、Excel/CSV
 
 选项固定为下面四项（第一项可标「常用」）：
 
-1. XMind 精简版（按页面/字段分组，标题写条件+操作，下挂预期；无 TC、无前置/步骤）
+1. XMind 精简版（按模块/功能点分组，标题写条件+操作，下挂预期；无 TC、无前置/步骤）
 2. Excel/CSV 完整可执行（含前置、步骤、预期）
 3. XMind 完整可执行（含前置、步骤、预期）
 4. 只要测试要点（不写用例）
@@ -49,7 +49,7 @@ description: "从需求设计软件功能测试用例，交付 XMind、Excel/CSV
 
 用户说「只要标题 / 精简清单」时按 XMind 精简版写，仍须有预期，不是纯标题清单。用户 **@** 某 reference 时以该文件为准。
 
-**评审已有用例**（不走第一节勾选）：先跑 `scripts/validate_testcase.py` 做结构校验，再按 `references/functional-testcase-design.md` 第六章「输出前核对」与对应格式指南逐条人工核对，输出问题清单而非直接改稿。
+**评审已有用例**（不走第一节勾选）：先跑 `scripts/validate_testcase.py` 做结构校验，再按 `references/functional-testcase-design.md` 的 2.2、3.1、3.2、3.3、3.4、第四节、第六章与对应格式指南逐条人工核对，输出问题清单而非直接改稿。
 
 **不做闭环**：只做单次设计 / 排版 / 要点，不要自造多 Agent 评审修复循环。
 
