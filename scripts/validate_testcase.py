@@ -7,8 +7,8 @@
 
 自动识别产物类型：
 - .csv                → Excel 完整版合同（10 列 / BOM / 优先级 / 实际结果 / 标题 ≤25 汉字且不含 TC·P0）
-- .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 无 TC 与（P0） / 标题 ≤25 汉字 /
-                        每条用例下有预期明细；含「测试步骤」或「前置条件」按完整版校验，否则按精简版校验）
+- .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 无 TC 与（P0） / 标题行末【高/中/低】 /
+                        标题 ≤25 汉字（不含优先级标记） / 每条用例下有预期明细；含「测试步骤」或「前置条件」按完整版校验，否则按精简版校验）
 - .md 不含「预期结果」标题 → 测试要点（要点行【高/中/低】/ 风险与回归提示 / 非步骤化）
 
 校验全部通过退出码为 0，否则为 1 并逐条打印 FAIL 原因。
@@ -23,12 +23,17 @@ STD_DIMS = ["功能测试", "边界测试", "异常测试", "权限测试", "安
 CSV_HEADER = ["功能模块", "功能测试点", "验证维度", "用例标题", "优先级",
               "前置条件", "测试步骤", "预期结果", "实际结果", "备注"]
 EXPECTED = "预期结果"
+PRI_MARK = re.compile(r"【(高|中|低)】\s*$")
 STEP_TITLES = {"测试步骤：", "测试步骤"}
 TITLE_MAX_CJK = 25
 
 
 def cjk_len(s):
     return len(re.findall(r"[\u4e00-\u9fff]", s))
+
+
+def title_body(s):
+    return PRI_MARK.sub("", s).rstrip()
 
 
 def read_raw(path):
@@ -153,9 +158,12 @@ def validate_xmind(text, results):
             bad_case.append(t[:40])
     results.append((not bad_case, f"用例标题不含 TC 编号、（P0）或维度名（异常：{bad_case[:3]}）"))
 
-    over = [f"{t}({cjk_len(t)}字)" for i in cases for _, _, t in [headings[i]]
-            if cjk_len(t) > TITLE_MAX_CJK]
-    results.append((not over, f"用例标题 ≤{TITLE_MAX_CJK} 个汉字（超长：{over[:3]}）"))
+    missing_pri = [t[:40] for i in cases for _, _, t in [headings[i]] if not PRI_MARK.search(t)]
+    results.append((not missing_pri, f"用例标题行末【高/中/低】（缺失：{missing_pri[:3]}）"))
+
+    over = [f"{t}({cjk_len(title_body(t))}字)" for i in cases for _, _, t in [headings[i]]
+            if cjk_len(title_body(t)) > TITLE_MAX_CJK]
+    results.append((not over, f"用例标题 ≤{TITLE_MAX_CJK} 个汉字（不含优先级标记）（超长：{over[:3]}）"))
 
     h_expected = [t for _, _, t in headings if t.rstrip("：") == EXPECTED]
     bad_exp_name = [t for t in h_expected if t != EXPECTED]
