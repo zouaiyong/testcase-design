@@ -47,7 +47,7 @@ description: "从需求设计软件功能测试用例，交付 XMind、Excel/CSV
 
 用户说「只要标题 / 精简清单」时按 XMind 精简版写，仍须有预期，不是纯标题清单。用户 **@** 某 reference 时以该文件为准。
 
-**评审已有用例**（不走第一节勾选）：先跑 `scripts/validate_testcase.py` 做结构校验，再按 `references/functional-testcase-design.md` 的 1.2、2.1、2.2、2.3、2.4、第三节、第四节与对应格式指南逐条人工核对，输出问题清单而非直接改稿。
+**评审已有用例**（不走第一节勾选）：先跑 `scripts/validate_testcase.py` 做结构校验，再按 `references/functional-testcase-design.md` 的 1.2、2.1、2.2、2.3、第三节与对应格式指南逐条人工核对，输出问题清单而非直接改稿。
 
 ---
 
