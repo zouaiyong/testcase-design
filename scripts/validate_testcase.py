@@ -8,7 +8,7 @@
 自动识别产物类型：
 - .csv                → Excel 完整版合同（10 列 / BOM / 优先级 / 实际结果 / 标题 ≤25 汉字且不含 TC·P0）
 - .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 无 TC 与（P0） / 标题行末【高/中/低】 /
-                        标题 ≤25 汉字（不含优先级标记） / 每条用例下有预期明细；含「测试步骤」或「前置条件」按完整版校验，否则按精简版校验）
+                        标题 ≤25 汉字（不含优先级标记） / 每条用例下有预期明细；不得含「测试步骤」「前置条件」）
 - .md 不含「预期结果」标题 → 测试要点（要点行【高/中/低】/ 风险与回归提示 / 非步骤化）
 
 校验全部通过退出码为 0，否则为 1 并逐条打印 FAIL 原因。
@@ -191,15 +191,11 @@ def validate_xmind(text, results):
     results.append((not case_without_expected, f"用例标题的直接子标题是「{EXPECTED}」"))
 
     h6 = [t for _, lv, t in headings if lv == 6]
-    bad6 = [t for t in h6 if t not in (EXPECTED, "测试步骤：")]
-    results.append((not bad6, f"###### 只用于 预期结果 / 测试步骤：（异常：{bad6[:3]}）"))
+    bad6 = [t for t in h6 if t != EXPECTED]
+    results.append((not bad6, f"###### 只用于「{EXPECTED}」（异常：{bad6[:3]}）"))
 
-    full = ("测试步骤" in text) or ("前置条件" in text)
-    if full:
-        results.append((True, "检测到前置/步骤：按完整版校验"))
-    else:
-        results.append(("前置条件" not in text and "测试步骤" not in text,
-                        "精简版不含前置条件/测试步骤"))
+    results.append(("前置条件" not in text and "测试步骤" not in text,
+                    "XMind 用例不含前置条件/测试步骤（要前置/步骤走 Excel）"))
 
 
 def validate_testpoint(text, results):
