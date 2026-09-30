@@ -1,6 +1,6 @@
 ---
 name: testcase-design
-description: "从需求设计软件功能测试用例，交付 XMind、Excel/CSV 或测试要点；也用于评审已有用例。用户要写测试用例、生成用例、设计用例、用例清单、完整可执行用例（前置+步骤+预期）、测试要点/测试点，把 PRD（含飞书 Wiki/云文档）转成用例，或评审/检查用例时使用；只说「写用例」「出个用例」且未提格式时也使用。不用于执行已有用例、写自动化脚本、探索性测试，以及生成-评审-修复闭环。"
+description: "从需求设计软件功能测试用例，交付 XMind、Excel/CSV 或测试要点；也用于评审已有用例。用户要写测试用例、生成用例、设计用例、用例清单、完整可执行用例（前置+步骤+预期）、测试要点/测试点，把 PRD（含飞书 Wiki/云文档）转成用例，或评审/检查用例时使用；只说「写用例」「出个用例」且未提格式时也使用。XMind/Excel 生成走闭环：写作子agent写 → 全新评审agent评 → 主agent自动修，评审最多 2 轮。不用于执行已有用例、写自动化脚本、探索性测试。"
 ---
 
 # 软件功能测试用例设计
@@ -9,9 +9,9 @@ description: "从需求设计软件功能测试用例，交付 XMind、Excel/CSV
 
 ## 一、先勾选格式（未勾选禁止生成）
 
-生成用例或测试要点之前，必须让用户勾选交付格式。**勾选完成前：不写文件、不输出用例/要点正文、不读 xmind/excel/testpoint 细则**（读完本节即停）。
+生成用例或测试要点之前，必须让用户勾选交付格式。**勾选完成前：不写文件、不输出用例/要点正文、不读 xmind/excel/testpoint 细则**（读完本节即停）。未指定格式就开写，只能猜成某一种交付物，后面经常和要入库的格式对不上。
 
-**能唯一落到下面三项之一才跳过勾选**：
+**只有下面这些情况才跳过勾选**：
 
 - 「XMind / 思维导图 / xmind格式」→ XMind 版
 - 「Excel / CSV / 表格」「完整版 / 可执行 / 含前置·步骤·预期」→ Excel/CSV 完整可执行
@@ -35,18 +35,38 @@ description: "从需求设计软件功能测试用例，交付 XMind、Excel/CSV
 
 ## 二、勾选后的产物路由
 
-| 已定格式 | 必读规则 |
-|----------|---------|
-| XMind 版 | `references/functional-testcase-design.md` + `references/testcase-xmind-guideline.md` |
-| Excel/CSV | `references/functional-testcase-design.md` + `references/testcase-excel-guideline.md` |
-| 测试要点 | `references/testpoint-analysis-guideline.md`；飞书来源再读 functional 第一节 |
+| 已定格式 | 必读规则 | 生成方式 |
+|----------|---------|---------|
+| XMind 版 | `references/functional-testcase-design.md` + `references/testcase-xmind-guideline.md` | 走第三节闭环 |
+| Excel/CSV | `references/functional-testcase-design.md` + `references/testcase-excel-guideline.md` | 走第三节闭环 |
+| 测试要点 | `references/testpoint-analysis-guideline.md`；飞书来源再读 functional 第一节 | 主 agent 单次输出，不走闭环。产物 `{输出目录}/{需求名称}-测试要点.md` |
 
-**评审已有用例**（不走第一节勾选）：先跑 `scripts/validate_testcase.py` 做结构校验，再按 `references/functional-testcase-design.md` 的 1.2、2.1、2.2、2.3、第三节与对应格式指南逐条人工核对，输出问题清单而非直接改稿。
+**评审已有用例**（不走第一节勾选）：先跑 `scripts/validate_testcase.py` 做结构校验，再按 `references/functional-testcase-design.md` 的 1.2、2.1、2.2、2.3、第三节与对应格式指南逐条人工核对，输出问题清单而非直接改稿。进清单前按 `references/review-loop.md` 第三节「进清单前剔除」过一遍（已在预期里点名的无效类、同一规则换入口、标题因 25 字把判定放进预期，都不算需修改）。带「若」「建议」「次要」的留在问题清单里，要改。只评这次拿到的需求和这份用例。仓库里以前的评审报告、历史「通过」不能当成这次的结论，否则会把上一次的判定带进来。
 
 ---
 
-## 三、执行约定
+## 三、生成-评审闭环（仅 XMind / Excel）
+
+主 agent 只做**拆解、派生、收集、修复、交付**，不代写用例正文。落盘规范、提示词模板与修复原则见 `references/review-loop.md`；派生子 agent 前把模板里的 `<skill根目录>` 替换成本 SKILL.md 所在目录的绝对路径。
+
+目录约定：用例文件写 `{输出目录}/{需求名称}-测试用例.md`（默认 `testcases/`，或用户指定目录）；**过程文件**（需求原文、拆解结论、评审报告、STATE、图片副本）一律写 `{输出目录}/work/`，用例目录只放用例文件。
+
+1. **拆解**：按 `references/functional-testcase-design.md` 第一节做需求拆解，产出原子需求清单（每条一个判定点：对象 + 规则/约束）与范围 / 不测 / 缺口，落盘为 `{输出目录}/work/{需求名称}-拆解.md`。测什么、成功是什么已经清楚时，缺口标【待确认】后继续写；每条缺口都停下来问，闭环会卡住。只有连测哪块都定不下来，才问一次。写作子 agent 不负责提问。
+2. **派生写作子 agent**：只派 1 个，用 review-loop 第二节模板。需求原文与拆解结论按 review-loop 第一节落盘到 `{输出目录}/work/`，模板里只给文件路径、不贴全文。禁止按模块拆派多个、禁止主 agent 代写用例正文。
+3. **收集**：跑 `python scripts/validate_testcase.py <产物>`。FAIL → resume 同一写作 agent 只补结构，**不算评审轮次**；通过才进评审。
+4. **初评（r1）**：新开 1 个**全新**评审 agent（禁止 resume 写作 agent 充当评审），用 review-loop 第三节模板。评审只挑刺、禁止改文件。报告写到 `{输出目录}/work/{需求名称}-评审-r1.md`。记下评审 agent id。
+5. **修复**：判「需修改」→ 主 agent 按清单逐条直接改（不问用户、不派修复 agent），改完再跑 validate。
+6. **复审（r2）**：resume 初评那个评审 agent 做增量复审（只验本轮改动 + 是否修出新问题），报告写 `{输出目录}/work/{需求名称}-评审-r2.md`。id 丢失则新开一个只做增量复审的 agent，仍计入第 2 轮。
+7. **出口（评审最多 2 轮）**：r1 或 r2 通过 → 交付；r2 仍需修改 → 主 agent 最后修一遍 + validate → 交付并在回复里附遗留问题清单。**禁止第 3 次评审**。
+8. **断点续跑**：派生写作 agent 前把 STATE 写到 `{输出目录}/work/{需求名称}-STATE.md`（模板见 review-loop 第五节），每完成一个阶段更新一次。中断后接手先读 STATE 按「下一步」续跑：产物已写不重写、报告已落盘不重评、agent id 丢失按 fallback 新开。
+
+测试要点、评审已有用例不走本闭环。
+
+---
+
+## 四、执行约定
 
 - 用户指定了输出目录时写到该目录，不必再镜像一份到 `testcases/`。
 - 用户要 `.xmind` 时交 Markdown，说明用 XMind 按标题导入。要表格时直接交 CSV。不要为了转格式去装新依赖或编写转换器。
 - 产物写完后，环境有 Python 时运行 `python scripts/validate_testcase.py <产物文件>`。有 FAIL 项先修好再交付。CSV 不带 BOM 时，Excel 打开会乱码，用 `python scripts/validate_testcase.py --fix-bom <csv>` 补齐。
+- 过程文件（需求原文、评审报告 r1/r2、STATE）放 `{输出目录}/work/`，用例目录只放用例文件；交付时在回复里说明评审结论（第几轮通过，或遗留问题清单）。
