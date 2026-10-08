@@ -1,6 +1,6 @@
 # XMind 格式测试用例规则
 
-质量、范围声明、覆盖方法一律遵 `functional-testcase-design.md`。本文件只约束 **XMind 兼容 Markdown 的层级**。
+质量、范围声明、覆盖方法一律遵 `testcase-design-rules.md`。本文件只约束 **XMind 兼容 Markdown 的层级**。
 
 交 Markdown，用 XMind 按标题导入，不直接生成 `.xmind`。
 

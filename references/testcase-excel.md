@@ -1,6 +1,6 @@
 # Excel 格式测试用例输出规则
 
-质量遵 `functional-testcase-design.md`。本文件只约束 **CSV 物理格式**（Excel / WPS 可打开；不生成 `.xlsx`）。
+质量遵 `testcase-design-rules.md`。本文件只约束 **CSV 物理格式**（Excel / WPS 可打开；不生成 `.xlsx`）。
 
 路径：`testcases/{需求名称}-测试用例.csv`。**同一需求只写一份文件**，不论条数；禁止拆成 `-01`/`-02`。用户指定了目录则写到该目录；仅当用户明确要求拆分时才分文件。
 

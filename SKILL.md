@@ -37,11 +37,11 @@ description: "从需求设计软件功能测试用例，交付 XMind、Excel/CSV
 
 | 已定格式 | 必读规则 | 生成方式 |
 |----------|---------|---------|
-| XMind 版 | `references/functional-testcase-design.md` + `references/testcase-xmind.md` | 走第三节闭环 |
-| Excel/CSV | `references/functional-testcase-design.md` + `references/testcase-excel.md` | 走第三节闭环 |
+| XMind 版 | `references/testcase-design-rules.md` + `references/testcase-xmind.md` | 走第三节闭环 |
+| Excel/CSV | `references/testcase-design-rules.md` + `references/testcase-excel.md` | 走第三节闭环 |
 | 测试要点 | `references/testpoint.md`；飞书来源再读 functional 第一节 | 主 agent 单次输出，不走闭环。产物 `{输出目录}/{需求名称}-测试要点.md` |
 
-**评审已有用例**（不走第一节勾选）：先跑 `scripts/validate_testcase.py` 做结构校验，再按 `references/functional-testcase-design.md` 的 1.2、2.1、2.2、2.3、第三节与对应格式指南逐条人工核对，输出问题清单而非直接改稿。进清单前按 `references/review-loop.md` 第三节「进清单前剔除」过一遍（已在预期里点名的无效类、同一规则换入口、标题因 25 字把判定放进预期，都不算需修改）。带「若」「建议」「次要」的留在问题清单里，要改。只评这次拿到的需求和这份用例。仓库里以前的评审报告、历史「通过」不能当成这次的结论，否则会把上一次的判定带进来。
+**评审已有用例**（不走第一节勾选）：先跑 `scripts/validate_testcase.py` 做结构校验，再按 `references/testcase-design-rules.md` 的 1.2、2.1、2.2、2.3、第三节与对应格式指南逐条人工核对，输出问题清单而非直接改稿。进清单前按 `references/review-loop.md` 第三节「进清单前剔除」过一遍（已在预期里点名的无效类、同一规则换入口、标题因 25 字把判定放进预期，都不算需修改）。带「若」「建议」「次要」的留在问题清单里，要改。只评这次拿到的需求和这份用例。仓库里以前的评审报告、历史「通过」不能当成这次的结论，否则会把上一次的判定带进来。
 
 ---
 
@@ -51,7 +51,7 @@ description: "从需求设计软件功能测试用例，交付 XMind、Excel/CSV
 
 目录约定：用例文件写 `{输出目录}/{需求名称}-测试用例.md`（默认 `testcases/`，或用户指定目录）；**过程文件**（需求原文、拆解结论、评审报告、STATE、图片副本）一律写 `{输出目录}/work/`，用例目录只放用例文件。
 
-1. **拆解**：按 `references/functional-testcase-design.md` 第一节做需求拆解，产出原子需求清单（每条一个判定点：对象 + 规则/约束）与范围 / 不测 / 缺口，落盘为 `{输出目录}/work/{需求名称}-拆解.md`。测什么、成功是什么已经清楚时，缺口标【待确认】后继续写；每条缺口都停下来问，闭环会卡住。只有连测哪块都定不下来，才问一次。写作子 agent 不负责提问。
+1. **拆解**：按 `references/testcase-design-rules.md` 第一节做需求拆解，产出原子需求清单（每条一个判定点：对象 + 规则/约束）与范围 / 不测 / 缺口，落盘为 `{输出目录}/work/{需求名称}-拆解.md`。测什么、成功是什么已经清楚时，缺口标【待确认】后继续写；每条缺口都停下来问，闭环会卡住。只有连测哪块都定不下来，才问一次。写作子 agent 不负责提问。
 2. **派生写作子 agent**：只派 1 个，用 review-loop 第二节模板。需求原文与拆解结论按 review-loop 第一节落盘到 `{输出目录}/work/`，模板里只给文件路径、不贴全文。禁止按模块拆派多个、禁止主 agent 代写用例正文。
 3. **收集**：跑 `python scripts/validate_testcase.py <产物>`。FAIL → resume 同一写作 agent 只补结构，**不算评审轮次**；通过才进评审。
 4. **初评（r1）**：新开 1 个**全新**评审 agent（禁止 resume 写作 agent 充当评审），用 review-loop 第三节模板。评审只挑刺、禁止改文件。报告写到 `{输出目录}/work/{需求名称}-评审-r1.md`。记下评审 agent id。

@@ -8,7 +8,7 @@
 
 主 agent 派生前落盘两个文件：需求原文 → `{用例输出目录}/work/{需求名称}-需求原文.md`，拆解结论 → `{用例输出目录}/work/{需求名称}-拆解.md`（禁止把长文贴进 prompt）。写作 / 评审模板里只填这两个文件的路径。
 
-**落盘必须全量**：这个文件是写作 / 评审 agent 唯一的需求来源，主 agent 拉到什么就落什么，不能只落正文。拉取口径按 `functional-testcase-design.md` 1.1（飞书四类：正文与结构、图片与附件、画板、评论）。文件结构：
+**落盘必须全量**：这个文件是写作 / 评审 agent 唯一的需求来源，主 agent 拉到什么就落什么，不能只落正文。拉取口径按 `testcase-design-rules.md` 1.1（飞书四类：正文与结构、图片与附件、画板、评论）。文件结构：
 
 ```text
 # {需求名称} 需求原文
@@ -62,7 +62,7 @@
 你是测试用例写作 Agent。只写用例：不做覆盖度/质量自评（那是评审 agent 的活）、不改需求范围。有疑问标【待确认】写进产物和返回消息，不要中断等回答。主 agent 只有在连「测哪块、成功是什么」都定不下来时才问用户；你不负责提问。
 
 ## 先读规则（写之前必读，用绝对路径）
-- <skill根目录>/references/functional-testcase-design.md（拆解口径、判定点并条、覆盖维度、标题与预期规范）
+- <skill根目录>/references/testcase-design-rules.md（拆解口径、判定点并条、覆盖维度、标题与预期规范）
 - <skill根目录>/references/testcase-xmind.md   ← Excel/CSV 任务换成 testcase-excel.md
 
 ## 需求原文
@@ -108,7 +108,7 @@
 - 格式类型：{XMind 版 / Excel CSV}
 
 ## 先读规则（评审依据，用绝对路径）
-- <skill根目录>/references/functional-testcase-design.md
+- <skill根目录>/references/testcase-design-rules.md
 - <skill根目录>/references/testcase-xmind.md   ← Excel/CSV 任务换成 testcase-excel.md
 
 ## 评审方法（先守方法，再逐项检查）
@@ -171,7 +171,7 @@
 最终消息只回：判定 + 没改到位条数 + 新问题条数。
 ```
 
-评审 agent id 丢失时：新开一个 agent，喂需求原文文件路径 + 拆解文件路径 + r1 清单 + 当前用例 + 本段模板，并让它先读 `<skill根目录>/references/functional-testcase-design.md` 和对应格式指南（判断「改到位」与「新问题」的规则依据须与初评一致），写明「你是复审，只做增量」，仍计入第 2 轮。
+评审 agent id 丢失时：新开一个 agent，喂需求原文文件路径 + 拆解文件路径 + r1 清单 + 当前用例 + 本段模板，并让它先读 `<skill根目录>/references/testcase-design-rules.md` 和对应格式指南（判断「改到位」与「新问题」的规则依据须与初评一致），写明「你是复审，只做增量」，仍计入第 2 轮。
 
 ---
 

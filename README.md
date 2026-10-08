@@ -47,7 +47,7 @@ git clone https://github.com/zouaiyong/testcase-design.git "$env:USERPROFILE\.cu
 testcase-design/
 ├── SKILL.md
 ├── references/
-│   ├── functional-testcase-design.md
+│   ├── testcase-design-rules.md
 │   ├── testcase-xmind.md
 │   ├── testcase-excel.md
 │   ├── testpoint.md
@@ -166,7 +166,7 @@ XMind 版禁止出现「前置条件」「测试步骤」、`TC1-001`、`（P0�
 需求进入后，顺序是：
 
 1. **勾选格式**（未指定则停步询问）
-2. 主 Agent 按 `references/functional-testcase-design.md` 第一节 **拆解**（范围、不测、原子需求清单、缺口）
+2. 主 Agent 按 `references/testcase-design-rules.md` 第一节 **拆解**（范围、不测、原子需求清单、缺口）
 3. XMind / Excel 走**生成-评审闭环**：派 1 个写作子 Agent 写产物 → 主 Agent 跑 `validate_testcase.py` 收集 → 新开评审 Agent 初评 → 需改则主 Agent 自动修 → resume 评审 Agent 增量复审，**评审最多 2 次**；复审仍不通过，主 Agent 最后修一遍，附遗留清单交付。模板与红线见 `references/review-loop.md`。闭环状态记录在 `{输出目录}/work/{需求名称}-STATE.md`，中断后凭它续跑
 4. 测试要点：主 Agent 按要点指南**单次输出**，输出后停步等确认，不走闭环
 
@@ -176,7 +176,7 @@ XMind 版禁止出现「前置条件」「测试步骤」、`TC1-001`、`（P0�
 
 功能测试、边界测试、异常测试、权限测试、安全测试、数据一致性测试、并发测试、集成测试、性能测试、兼容性测试、用户体验测试
 
-除功能类外命中才写，不按文档长短减项。细则见 `references/functional-testcase-design.md` 的 2.2。查询 / 筛选：共享规则（精确、模糊、空格、批量上限、条件必填）只在代表字段写全；没有独有规则的字段不单开；另一个页签只写差异。映射表一个对象一条，编码写在预期里。导入与在线编辑、推送与补数仍分别写，不抽成公共校验。收条数时保留端到端主流程。
+除功能类外命中才写，不按文档长短减项。细则见 `references/testcase-design-rules.md` 的 2.2。查询 / 筛选：共享规则（精确、模糊、空格、批量上限、条件必填）只在代表字段写全；没有独有规则的字段不单开；另一个页签只写差异。映射表一个对象一条，编码写在预期里。导入与在线编辑、推送与补数仍分别写，不抽成公共校验。收条数时保留端到端主流程。
 
 ---
 
@@ -186,7 +186,7 @@ XMind 版禁止出现「前置条件」「测试步骤」、`TC1-001`、`（P0�
 .
 ├── SKILL.md                                      # 入口：何时用、先勾选格式、产物路由
 ├── references/
-│   ├── functional-testcase-design.md             # 质量单一事实源：拆解 / 方法 / 维度 / 覆盖 / 标题规范
+│   ├── testcase-design-rules.md                  # 质量单一事实源：拆解 / 方法 / 维度 / 覆盖 / 标题规范
 │   ├── testcase-xmind.md                         # XMind 日常脑图层级（模块/字段/操作标题/预期）
 │   ├── testcase-excel.md                         # CSV 10 列物理格式
 │   ├── testpoint.md                              # 测试要点写法与三重扫描
@@ -195,7 +195,7 @@ XMind 版禁止出现「前置条件」「测试步骤」、`TC1-001`、`（P0�
     └── validate_testcase.py                      # 产物结构自检；--fix-bom 给 CSV 补 BOM
 ```
 
-维护约定：质量、范围声明、标题写法以 `functional-testcase-design.md` 为准；排版分别遵 xmind / excel / testpoint 指南。Agent 应按任务按需读取，不要一次读完 `references/`。
+维护约定：质量、范围声明、标题写法以 `testcase-design-rules.md` 为准；排版分别遵 xmind / excel / testpoint 指南。Agent 应按任务按需读取，不要一次读完 `references/`。
 
 ---
 
