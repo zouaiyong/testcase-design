@@ -37,9 +37,9 @@ description: "从需求设计软件功能测试用例，交付 XMind、Excel/CSV
 
 | 已定格式 | 必读规则 | 生成方式 |
 |----------|---------|---------|
-| XMind 版 | `references/functional-testcase-design.md` + `references/testcase-xmind-guideline.md` | 走第三节闭环 |
-| Excel/CSV | `references/functional-testcase-design.md` + `references/testcase-excel-guideline.md` | 走第三节闭环 |
-| 测试要点 | `references/testpoint-analysis-guideline.md`；飞书来源再读 functional 第一节 | 主 agent 单次输出，不走闭环。产物 `{输出目录}/{需求名称}-测试要点.md` |
+| XMind 版 | `references/functional-testcase-design.md` + `references/testcase-xmind.md` | 走第三节闭环 |
+| Excel/CSV | `references/functional-testcase-design.md` + `references/testcase-excel.md` | 走第三节闭环 |
+| 测试要点 | `references/testpoint.md`；飞书来源再读 functional 第一节 | 主 agent 单次输出，不走闭环。产物 `{输出目录}/{需求名称}-测试要点.md` |
 
 **评审已有用例**（不走第一节勾选）：先跑 `scripts/validate_testcase.py` 做结构校验，再按 `references/functional-testcase-design.md` 的 1.2、2.1、2.2、2.3、第三节与对应格式指南逐条人工核对，输出问题清单而非直接改稿。进清单前按 `references/review-loop.md` 第三节「进清单前剔除」过一遍（已在预期里点名的无效类、同一规则换入口、标题因 25 字把判定放进预期，都不算需修改）。带「若」「建议」「次要」的留在问题清单里，要改。只评这次拿到的需求和这份用例。仓库里以前的评审报告、历史「通过」不能当成这次的结论，否则会把上一次的判定带进来。
 

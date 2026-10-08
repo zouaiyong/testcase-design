@@ -48,9 +48,9 @@ testcase-design/
 ├── SKILL.md
 ├── references/
 │   ├── functional-testcase-design.md
-│   ├── testcase-xmind-guideline.md
-│   ├── testcase-excel-guideline.md
-│   ├── testpoint-analysis-guideline.md
+│   ├── testcase-xmind.md
+│   ├── testcase-excel.md
+│   ├── testpoint.md
 │   └── review-loop.md
 └── scripts/
     └── validate_testcase.py        # 产物结构自检；--fix-bom 给 CSV 补 BOM
@@ -187,9 +187,9 @@ XMind 版禁止出现「前置条件」「测试步骤」、`TC1-001`、`（P0�
 ├── SKILL.md                                      # 入口：何时用、先勾选格式、产物路由
 ├── references/
 │   ├── functional-testcase-design.md             # 质量单一事实源：拆解 / 方法 / 维度 / 覆盖 / 标题规范
-│   ├── testcase-xmind-guideline.md               # XMind 日常脑图层级（模块/字段/操作标题/预期）
-│   ├── testcase-excel-guideline.md               # CSV 10 列物理格式
-│   ├── testpoint-analysis-guideline.md           # 测试要点写法与三重扫描
+│   ├── testcase-xmind.md                         # XMind 日常脑图层级（模块/字段/操作标题/预期）
+│   ├── testcase-excel.md                         # CSV 10 列物理格式
+│   ├── testpoint.md                              # 测试要点写法与三重扫描
 │   └── review-loop.md                            # 闭环手册：落盘规范 / 写作·评审提示词模板 / 修复原则 / STATE
 └── scripts/
     └── validate_testcase.py                      # 产物结构自检；--fix-bom 给 CSV 补 BOM

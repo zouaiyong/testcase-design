@@ -63,7 +63,7 @@
 
 ## 先读规则（写之前必读，用绝对路径）
 - <skill根目录>/references/functional-testcase-design.md（拆解口径、判定点并条、覆盖维度、标题与预期规范）
-- <skill根目录>/references/testcase-xmind-guideline.md   ← Excel/CSV 任务换成 testcase-excel-guideline.md
+- <skill根目录>/references/testcase-xmind.md   ← Excel/CSV 任务换成 testcase-excel.md
 
 ## 需求原文
 {需求文件绝对路径}——先 Read 全文再动笔，禁止只读开头
@@ -109,7 +109,7 @@
 
 ## 先读规则（评审依据，用绝对路径）
 - <skill根目录>/references/functional-testcase-design.md
-- <skill根目录>/references/testcase-xmind-guideline.md   ← Excel/CSV 任务换成 testcase-excel-guideline.md
+- <skill根目录>/references/testcase-xmind.md   ← Excel/CSV 任务换成 testcase-excel.md
 
 ## 评审方法（先守方法，再逐项检查）
 1. 以需求原文 / 原子需求清单为锚，逐条查用例有没有覆盖；禁止以用例为锚按行号顺序扫
