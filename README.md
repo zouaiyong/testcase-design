@@ -4,7 +4,7 @@ Cursor Agent Skill：把产品需求 / PRD 设计成可入库的功能测试用�
 
 本仓库是一套给 AI Agent 读的规则，不是测试执行框架。Agent 读完 `SKILL.md` 与对应 `references/` 后，按你勾选的格式生成 Markdown / CSV。适用于「写用例、生成用例、设计用例、出测试要点、把飞书 Wiki/云文档转成用例」这类任务。
 
-**XMind / Excel 生成走闭环**：写作子 Agent 写 → 全新评审 Agent 评 → 主 Agent 自动修，评审最多 2 轮（初评 + 1 次增量复审）；测试要点仍是单次输出。不做执行已有用例、写自动化脚本、探索性测试。
+**XMind / Excel 生成走闭环**：写作子 Agent 写 → 全新评审 Agent 评 → 主 Agent 自动修，评审最多 2 轮（初评 + 1 次增量复审）；用例定稿后，同一目录再出一份人工评审指引。测试要点仍是单次输出，不另出指引。不做执行已有用例、写自动化脚本、探索性测试。
 
 ---
 
@@ -18,6 +18,7 @@ Cursor Agent Skill：把产品需求 / PRD 设计成可入库的功能测试用�
 | 覆盖有约束 | 设计时按 11 个维度自检；功能类不可缺。需求已写的角色与数据范围按权限写；没写的越权、注入默认不写。XMind 不输出维度节点 |
 | 按判定点写 | 分组按页面 / 字段，条数按判定点。共享规则只在代表字段写全；同类页签只写差异；映射表不按编码拆。导入与编辑、推送与补数等不同写入仍各自写 |
 | 独立评审闭环 | XMind / Excel 由写作子 Agent 产出，新开评审 Agent 挑刺、主 Agent 按清单自动修；评审最多 2 轮，复审仍不过附遗留清单交付 |
+| 人工评审指引 | 用例定稿后写 `{需求名称}-评审指引.md`，与用例同目录。按范围、待确认、高危断言三节填「你的结论」后贴回，即可改用例 |
 
 ---
 
@@ -51,7 +52,8 @@ testcase-design/
 │   ├── testcase-xmind.md
 │   ├── testcase-excel.md
 │   ├── testpoint.md
-│   └── review-loop.md
+│   ├── review-loop.md
+│   └── review-guide.md          # 人工评审指引：何时写、三节怎么抽
 └── scripts/
     └── validate_testcase.py        # 产物结构自检；--fix-bom 给 CSV 补 BOM
 ```
@@ -101,7 +103,7 @@ testcase-design/
 | Excel/CSV | UTF-8 BOM 的 10 列 CSV | 设计规则 + Excel 指南 | `testcases/{需求名称}-测试用例.csv` |
 | 测试要点 | Markdown 要点清单 | 要点指南；飞书来源再读设计规则第一节 | `testcases/{需求名称}-测试要点.md` |
 
-XMind / Excel 由写作子 Agent 产出，随后新开评审 Agent 评审、主 Agent 自动修（评审最多 2 轮）；需求原文、评审报告、STATE 等过程文件放 `{输出目录}/work/`，用例目录只放用例。测试要点由主 Agent 直接输出，不走闭环。
+XMind / Excel 由写作子 Agent 产出，随后新开评审 Agent 评审、主 Agent 自动修（评审最多 2 轮）。用例定稿后，同目录写 `{需求名称}-评审指引.md`。按其中三节填「你的结论」再贴回来即可改用例：看范围划分、拍板【待确认】、高危断言快查。没填的行保持原样。需求原文、评审报告、STATE 等过程文件放 `{输出目录}/work/`。测试要点由主 Agent 直接输出，不走闭环，也不出评审指引。
 
 你指定了输出目录时，写到该目录，不再额外镜像一份到 `testcases/`。同一需求只写**一份文件**，不因条数拆成 `-01` / `-02`。
 
@@ -166,8 +168,8 @@ XMind 版禁止出现「前置条件」「测试步骤」、`TC1-001`、`（P0�
 需求进入后，顺序是：
 
 1. **勾选格式**（未指定则停步询问）
-2. 主 Agent 按 `references/testcase-design-rules.md` 第一节 **拆解**（范围、不测、原子需求清单、缺口）
-3. XMind / Excel 走**生成-评审闭环**：派 1 个写作子 Agent 写产物 → 主 Agent 跑 `validate_testcase.py` 收集 → 新开评审 Agent 初评 → 需改则主 Agent 自动修 → resume 评审 Agent 增量复审，**评审最多 2 次**；复审仍不通过，主 Agent 最后修一遍，附遗留清单交付。模板与红线见 `references/review-loop.md`。闭环状态记录在 `{输出目录}/work/{需求名称}-STATE.md`，中断后凭它续跑
+2. 主 Agent 按 `references/testcase-design-rules.md` 第一节 **拆解**（范围、不测、原子需求清单、缺口、范围判断）
+3. XMind / Excel 走**生成-评审闭环**：派 1 个写作子 Agent 写产物 → 主 Agent 跑 `validate_testcase.py` 收集 → 新开评审 Agent 初评 → 需改则主 Agent 自动修 → resume 评审 Agent 增量复审，**评审最多 2 次**；复审仍不通过，主 Agent 最后修一遍。用例定稿后按 `references/review-guide.md` 写人工评审指引，再交付。模板与红线见 `references/review-loop.md`。闭环状态记录在 `{输出目录}/work/{需求名称}-STATE.md`，中断后凭它续跑
 4. 测试要点：主 Agent 按要点指南**单次输出**，输出后停步等确认，不走闭环
 
 有内容才写「范围声明」：需求来源（有文档链接才写）、不测范围、缺口 / 待确认。都空则整段省略，不会用「无」凑块。
@@ -190,12 +192,13 @@ XMind 版禁止出现「前置条件」「测试步骤」、`TC1-001`、`（P0�
 │   ├── testcase-xmind.md                         # XMind 日常脑图层级（模块/字段/操作标题/预期）
 │   ├── testcase-excel.md                         # CSV 10 列物理格式
 │   ├── testpoint.md                              # 测试要点写法与三重扫描
-│   └── review-loop.md                            # 闭环手册：落盘规范 / 写作·评审提示词模板 / 修复原则 / STATE
+│   ├── review-loop.md                            # 闭环手册：落盘规范 / 写作·评审提示词模板 / 修复原则 / STATE
+│   └── review-guide.md                           # 人工评审指引：定稿后写、三节怎么抽、四维打分
 └── scripts/
     └── validate_testcase.py                      # 产物结构自检；--fix-bom 给 CSV 补 BOM
 ```
 
-维护约定：质量、范围声明、标题写法以 `testcase-design-rules.md` 为准；排版分别遵 xmind / excel / testpoint 指南。Agent 应按任务按需读取，不要一次读完 `references/`。
+维护约定：质量、范围声明、标题写法以 `testcase-design-rules.md` 为准；排版分别遵 xmind / excel / testpoint 指南；人工评审指引以 `review-guide.md` 为准。Agent 应按任务按需读取，不要一次读完 `references/`。
 
 ---
 
