@@ -8,7 +8,9 @@
 自动识别产物类型：
 - .csv                → Excel 完整版合同（10 列 / BOM / 优先级 / 实际结果 / 标题 ≤25 汉字且不含 TC·P0）
 - .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 无 TC 与（P0） / 标题行末【高/中/低】 /
-                        标题 ≤25 汉字（不含优先级标记） / 每条用例下有预期明细；不得含「测试步骤」「前置条件」）
+                        标题 ≤25 汉字（不含优先级标记） / 标题无 ** 与反引号、行尾无空格 / 只有标题和 - 明细 /
+                        范围声明至多一处且在模块前 / 用例下只挂一个「预期结果」且有明细 /
+                        同一功能点不混用有分组和无分组；不得含「测试步骤」「前置条件」）
 - .md 不含「预期结果」标题 → 测试要点（要点行【高/中/低】/ 风险与回归提示 / 非步骤化）
 
 校验全部通过退出码为 0，否则为 1 并逐条打印 FAIL 原因。
@@ -23,6 +25,7 @@ STD_DIMS = ["功能测试", "边界测试", "异常测试", "权限测试", "安
 CSV_HEADER = ["功能模块", "功能测试点", "验证维度", "用例标题", "优先级",
               "前置条件", "测试步骤", "预期结果", "实际结果", "备注"]
 EXPECTED = "预期结果"
+EXPECTED_LIKE = re.compile(r"^(预期|期望)(结果)?[：:]?$|^结果[：:]?$")
 PRI_MARK = re.compile(r"【(高|中|低)】\s*$")
 STEP_TITLES = {"测试步骤：", "测试步骤"}
 TITLE_MAX_CJK = 25
@@ -131,12 +134,26 @@ def validate_xmind(text, results):
         prev = lv
     results.append((not skip, f"标题层级不跳级（跳级：{skip[:3]}）"))
 
+    styled = [t[:40] for _, _, t in headings if re.search(r"[*`]", t)]
+    results.append((not styled, f"标题不含 ** / * / 反引号（异常：{styled[:3]}）"))
+    trailing = [t[:40] for i, _, t in headings if lines[i] != lines[i].rstrip()]
+    results.append((not trailing, f"标题行尾无空格（异常：{trailing[:3]}）"))
+    stray = [ln.strip()[:40] for ln in lines
+             if ln.strip() and not re.match(r"^#+\s", ln) and not re.match(r"^\s*-\s+\S", ln)]
+    results.append((not stray, f"全文只有标题和 - 明细，没有普通段落（异常：{stray[:3]}）"))
+
     dim_heads = [t for _, _, t in headings if t in STD_DIMS]
     results.append((not dim_heads, f"不把 11 个维度名写成标题节点（异常：{dim_heads[:3]}）"))
 
     modules = [t for _, lv, t in headings if lv == 2 and t != "范围声明"]
     results.append((bool(modules), "存在业务 ## 模块（范围声明不算）"))
     results.append((any(lv == 3 for _, lv, _ in headings), "存在 ### 功能点"))
+
+    scope = [(k, lv) for k, (_, lv, t) in enumerate(headings) if t == "范围声明"]
+    first_biz = next((k for k, (_, lv, t) in enumerate(headings) if lv == 2 and t != "范围声明"),
+                     len(headings))
+    scope_ok = len(scope) <= 1 and all(lv == 2 and k < first_biz for k, lv in scope)
+    results.append((scope_ok, f"「范围声明」至多一处，为 ## 且在第一个业务模块之前（实际 {len(scope)} 处）"))
 
     cases = []
     expected_idx = []
@@ -165,7 +182,7 @@ def validate_xmind(text, results):
             if cjk_len(title_body(t)) > TITLE_MAX_CJK]
     results.append((not over, f"用例标题 ≤{TITLE_MAX_CJK} 个汉字（不含优先级标记）（超长：{over[:3]}）"))
 
-    h_expected = [t for _, _, t in headings if t.rstrip("：") == EXPECTED]
+    h_expected = [t for _, _, t in headings if EXPECTED_LIKE.match(t)]
     bad_exp_name = [t for t in h_expected if t != EXPECTED]
     results.append((not bad_exp_name,
                     f"预期标题须恰好为「{EXPECTED}」（异常：{bad_exp_name[:3]}）"))
@@ -183,12 +200,19 @@ def validate_xmind(text, results):
             missing_detail.append(parent)
     results.append((not missing_detail, f"每个「{EXPECTED}」下至少一条 - 明细（缺失：{missing_detail[:3]}）"))
 
-    case_without_expected = []
+    extra = []
     for i in cases:
-        child_titles = [headings[j][2] for j in direct_children(headings, i)]
-        if EXPECTED not in child_titles:
-            case_without_expected.append(headings[i][2][:40])
-    results.append((not case_without_expected, f"用例标题的直接子标题是「{EXPECTED}」"))
+        kids = [headings[j][2] for j in direct_children(headings, i)]
+        if kids != [EXPECTED] or list_items(lines, headings[i][0] + 1, next_heading_line(headings, i, n_lines)):
+            extra.append(headings[i][2][:40])
+    results.append((not extra, f"用例标题下只挂一个「{EXPECTED}」，没有别的子节点（异常：{extra[:3]}）"))
+
+    case_set = set(cases)
+    mixed = []
+    for i, (_, lv, t) in enumerate(headings):
+        if lv == 3 and len({j in case_set for j in direct_children(headings, i)}) > 1:
+            mixed.append(t[:40])
+    results.append((not mixed, f"同一功能点下不混用有分组和无分组写法（异常：{mixed[:3]}）"))
 
     h6 = [t for _, lv, t in headings if lv == 6]
     bad6 = [t for t in h6 if t != EXPECTED]
