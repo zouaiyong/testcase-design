@@ -5,18 +5,23 @@
     python scripts/validate_testcase.py <产物文件>          # 校验
     python scripts/validate_testcase.py --fix-bom <csv>     # 给 CSV 补 UTF-8 BOM
 
-自动识别产物类型：
-- .csv                → Excel 完整版合同（10 列 / BOM / 优先级 / 实际结果 / 标题 ≤25 汉字且不含 TC·P0）
+只接受 .csv / .md；.xlsx / .xmind 请先另存为 CSV / Markdown。自动识别产物类型：
+- .csv                → Excel 完整版合同（10 列 / BOM / 优先级 / 实际结果 / 标题 ≤25 汉字且不含 TC·P0 与【高/中/低】 /
+                        功能模块与功能测试点非空且测试点不是维度名 / 字段不以 = + - @ 开头 / 步骤每行带序号 /
+                        排列：模块、功能点连续，块内维度按 2.2 顺序、同维度高优先级在前）
 - .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 无 TC 与（P0） / 标题行末【高/中/低】 /
                         标题 ≤25 汉字（不含优先级标记） / 标题无 ** 与反引号、行尾无空格 / 只有标题和 - 明细 /
-                        范围声明至多一处且在模块前 / 用例下只挂一个「预期结果」且有明细 /
+                        - 明细只在「预期结果」「范围声明」下 / 范围声明至多一处、在模块前、只含 - 明细 /
+                        用例下只挂一个「预期结果」且有明细 / 每个模块、功能点下至少一条用例 /
                         同一功能点不混用有分组和无分组；不得含「测试步骤」「前置条件」）
-- .md 不含「预期结果」标题 → 测试要点（要点行【高/中/低】/ 风险与回归提示 / 非步骤化）
+- .md 不含「预期结果」标题 → 测试要点（一个 # / 不跳级 / 层级到 #### / 要点行【高/中/低】 / 非步骤化 /
+                        「风险与回归提示」为最后一节）
 
-校验全部通过退出码为 0，否则为 1 并逐条打印 FAIL 原因。
+校验全部通过退出码为 0，否则为 1 并逐条打印 FAIL 原因；文件类型不支持退出码为 2。
 """
 import csv
 import io
+import os
 import re
 import sys
 
@@ -29,6 +34,11 @@ EXPECTED_LIKE = re.compile(r"^(预期|期望)(结果)?[：:]?$|^结果[：:]?$")
 PRI_MARK = re.compile(r"【(高|中|低)】\s*$")
 STEP_TITLES = {"测试步骤：", "测试步骤"}
 TITLE_MAX_CJK = 25
+PRI_RANK = {"高": 0, "中": 1, "低": 2}
+FORMULA_PREFIX = ("=", "+", "-", "@")
+STEP_NUM = re.compile(r"^\s*\d+[.、．)）]")
+SCOPE = "范围声明"
+RISK = "风险与回归提示"
 
 
 def cjk_len(s):
@@ -84,6 +94,24 @@ def list_items(lines, start, end):
     return [ln.strip() for ln in lines[start:end] if re.match(r"^\s*-\s+\S", ln)]
 
 
+def span_end(headings, idx, n_lines):
+    """标题 idx 的管辖范围终点：下一个级别 <= 它的标题所在行，或文件末尾。"""
+    _, lv, _ = headings[idx]
+    for j in range(idx + 1, len(headings)):
+        if headings[j][1] <= lv:
+            return headings[j][0]
+    return n_lines
+
+
+def level_skips(headings):
+    prev, skip = 0, []
+    for _, lv, t in headings:
+        if prev and lv > prev + 1:
+            skip.append(t[:40])
+        prev = lv
+    return skip
+
+
 def validate_csv(path, results):
     raw = read_raw(path)
     results.append((raw.startswith(b"\xef\xbb\xbf"),
@@ -118,6 +146,40 @@ def validate_csv(path, results):
     bad_dim = sorted({r[2].strip() for _, r in ok10} - set(STD_DIMS))
     results.append((not bad_dim, f"验证维度均为 11 个标准名（异常：{bad_dim}）"))
 
+    empty_mod = [f"第{i}行" for i, r in ok10 if not r[0].strip() or not r[1].strip()]
+    results.append((not empty_mod, f"功能模块/功能测试点非空（异常：{empty_mod[:3]}）"))
+    dim_as_point = [label(i, r) for i, r in ok10 if r[1].strip() in STD_DIMS]
+    results.append((not dim_as_point, f"功能测试点不填维度名（异常：{dim_as_point[:3]}）"))
+    pri_in_title = [label(i, r) for i, r in ok10 if PRI_MARK.search(r[3])]
+    results.append((not pri_in_title, f"标题列不带【高/中/低】，优先级只在第 5 列（异常：{pri_in_title[:3]}）"))
+    bad_formula = [f"{label(i, r)}:第{k + 1}列" for i, r in ok10
+                   for k, c in enumerate(r) if c.strip()[:1] in FORMULA_PREFIX]
+    results.append((not bad_formula, f"字段不以 = + - @ 开头，Excel 会当公式（异常：{bad_formula[:3]}）"))
+    bad_steps = [label(i, r) for i, r in ok10
+                 if any(ln.strip() and not STEP_NUM.match(ln) for ln in r[6].splitlines())]
+    results.append((not bad_steps, f"测试步骤每行带序号（异常：{bad_steps[:3]}）"))
+
+    order_bad, seen_mod, seen_pt = [], set(), set()
+    prev_mod = prev_key = None
+    prev_rank = (-1, -1)
+    for i, r in ok10:
+        mod, pt, dim, pri = r[0].strip(), r[1].strip(), r[2].strip(), r[4].strip()
+        key = (mod, pt)
+        if mod != prev_mod:
+            if mod in seen_mod:
+                order_bad.append(f"第{i}行 模块「{mod}」不连续")
+            seen_mod.add(mod)
+        if key != prev_key:
+            if key in seen_pt:
+                order_bad.append(f"第{i}行 功能点「{pt}」不连续")
+            seen_pt.add(key)
+            prev_rank = (-1, -1)
+        rank = (STD_DIMS.index(dim) if dim in STD_DIMS else 99, PRI_RANK.get(pri, 9))
+        if rank < prev_rank:
+            order_bad.append(f"第{i}行 「{r[3].strip()[:20]}」维度/优先级顺序")
+        prev_rank, prev_mod, prev_key = rank, mod, key
+    results.append((not order_bad, f"排列：模块、功能点连续，块内维度按 2.2 顺序、同维度高优先级在前（异常：{order_bad[:3]}）"))
+
 
 def validate_xmind(text, results):
     lines = text.splitlines()
@@ -127,11 +189,7 @@ def validate_xmind(text, results):
     h1 = [t for _, lv, t in headings if lv == 1]
     results.append((len(h1) == 1, f"全文恰好一个 # 中心主题（实际 {len(h1)} 个）"))
 
-    prev, skip = 0, []
-    for _, lv, t in headings:
-        if prev and lv > prev + 1:
-            skip.append(t[:40])
-        prev = lv
+    skip = level_skips(headings)
     results.append((not skip, f"标题层级不跳级（跳级：{skip[:3]}）"))
 
     styled = [t[:40] for _, _, t in headings if re.search(r"[*`]", t)]
@@ -218,21 +276,59 @@ def validate_xmind(text, results):
     bad6 = [t for t in h6 if t != EXPECTED]
     results.append((not bad6, f"###### 只用于「{EXPECTED}」（异常：{bad6[:3]}）"))
 
+    scope_spans = [(headings[k][0], span_end(headings, k, n_lines)) for k, _ in scope]
+
+    def in_scope(line_no):
+        return any(s < line_no < e for s, e in scope_spans)
+
+    stray_items = []
+    if headings and list_items(lines, 0, headings[0][0]):
+        stray_items.append("文首")
+    for k, (ln_i, _, t) in enumerate(headings):
+        if t.rstrip("：") == EXPECTED or t == SCOPE or k in case_set or in_scope(ln_i):
+            continue
+        if list_items(lines, ln_i + 1, next_heading_line(headings, k, n_lines)):
+            stray_items.append(t[:40])
+    results.append((not stray_items, f"- 明细只出现在「{EXPECTED}」和「{SCOPE}」下（异常：{stray_items[:3]}）"))
+
+    for k, _ in scope:
+        ln_i = headings[k][0]
+        kids = direct_children(headings, k)
+        items = list_items(lines, ln_i + 1, next_heading_line(headings, k, n_lines))
+        results.append((not kids and bool(items), f"「{SCOPE}」下只有 - 明细：无子标题且至少一条"))
+
+    empty_nodes = []
+    for k, (ln_i, lv, t) in enumerate(headings):
+        if lv in (2, 3) and t != SCOPE and not in_scope(ln_i):
+            end = span_end(headings, k, n_lines)
+            if not any(ln_i < headings[c][0] < end for c in cases):
+                empty_nodes.append(t[:40])
+    results.append((not empty_nodes, f"每个模块 / 功能点下至少一条用例（空节点：{empty_nodes[:3]}）"))
+
     results.append(("前置条件" not in text and "测试步骤" not in text,
                     "XMind 用例不含前置条件/测试步骤（要前置/步骤走 Excel）"))
 
 
 def validate_testpoint(text, results):
+    lines = text.splitlines()
+    headings = parse_headings(lines)
+    h1 = [t for _, lv, t in headings if lv == 1]
+    results.append((len(h1) == 1, f"全文恰好一个 # 标题（实际 {len(h1)} 个）"))
+    skip = level_skips(headings)
+    results.append((not skip, f"标题层级不跳级（跳级：{skip[:3]}）"))
+    deep = [t[:40] for _, lv, t in headings if lv >= 5]
+    results.append((not deep, f"要点层级到 #### 为止，#### 下直接写 -（异常：{deep[:3]}）"))
     results.append((not re.search(r"^#+\s*预期结果\s*$", text, re.M), "要点不含「预期结果」标题"))
     results.append(("测试步骤" not in text, "要点不含测试步骤"))
-    main_part = re.split(r"^##\s*风险与回归提示", text, flags=re.M)[0]
+    main_part = re.split(r"^##\s*" + RISK, text, flags=re.M)[0]
     pts = [ln for ln in main_part.splitlines() if re.match(r"^\s*-\s+", ln)]
     with_pri = [ln for ln in pts if re.search(r"【(高|中|低)】", ln)]
     results.append((bool(pts) and len(with_pri) == len(pts),
                     f"要点行末均带【高/中/低】（{len(with_pri)}/{len(pts)}）"))
     step_like = [ln.strip()[:30] for ln in pts if re.match(r"^\s*-\s*(点击|输入|打开|进入页面)", ln)]
     results.append((not step_like, f"要点非步骤化（步骤化：{step_like[:3]}）"))
-    results.append(("风险与回归提示" in text, "文末有「风险与回归提示」"))
+    h2 = [t for _, lv, t in headings if lv == 2]
+    results.append((bool(h2) and h2[-1].startswith(RISK), f"「{RISK}」是最后一个 ## 节"))
 
 
 def main():
@@ -243,6 +339,10 @@ def main():
         print(__doc__)
         return 2
     path = paths[0]
+    ext = os.path.splitext(path)[1].lower()
+    if ext not in (".csv", ".md", ".markdown"):
+        print(f"FAIL 不支持的文件类型「{ext or '无扩展名'}」：只校验 .csv / .md；.xlsx / .xmind 请先另存为 CSV / Markdown")
+        return 2
     if fix_bom:
         raw = read_raw(path)
         if raw.startswith(b"\xef\xbb\xbf"):
