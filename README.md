@@ -25,17 +25,17 @@ Cursor Agent Skill：把产品需求 / PRD 设计成可入库的功能测试用�
 
 ## 安装
 
-推荐用这条命令安装。它会把本仓库装进 `~/.agents/skills/testcase-design`，装完后新开一轮对话即可被发现。目录页在 [skills.sh](https://skills.sh)。
+推荐用这条命令安装。它会把本仓库装进 `~/.agents/skills/testcase-design`。目录页在 [skills.sh](https://skills.sh)。
 
 ```bash
 npx skills add zouaiyong/testcase-design
 ```
 
-仓库需保持 GitHub 公开，别人才能用这条命令安装。
+`~/.agents/skills/` 不是每个 Agent 都会读。WorkBuddy、Claude Code 就不读这个目录，装完后在它们里面发现不了。解决办法：打开对应的 Agent，让它把 `~/.agents/skills/testcase-design` 软链接到该产品自己的 skills 目录下（WorkBuddy 为 `~/.workbuddy/skills/testcase-design`，Claude Code 为 `~/.claude/skills/testcase-design`）。Windows 上如果建不了软链接，让它改用目录联接。链好后新开一轮对话即可被发现。
 
 ### 手动放到 skills 目录
 
-把本仓库内容放到 `~/.agents/skills/testcase-design/`，新开一轮对话后即可被发现。
+把本仓库内容放到 `~/.agents/skills/testcase-design/`。不读这个目录的 Agent，按上面的办法做软链接。
 
 目录必须包含 `SKILL.md`：
 
