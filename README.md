@@ -25,17 +25,17 @@ Cursor Agent Skill：把产品需求 / PRD 设计成可入库的功能测试用�
 
 ## 安装
 
-推荐用这条命令安装。它会把本仓库装进本机的 Agent skills 目录（Cursor 一般是 `~/.cursor/skills/testcase-design` 或 `~/.agents/skills/`），装完后新开一轮对话即可被发现。目录页在 [skills.sh](https://skills.sh)。
+推荐用这条命令安装。它会把本仓库装进 `~/.agents/skills/testcase-design`，装完后新开一轮对话即可被发现。目录页在 [skills.sh](https://skills.sh)。
 
 ```bash
 npx skills add zouaiyong/testcase-design
 ```
 
-执行时会询问装给哪些 Agent，选 Cursor。仓库需保持 GitHub 公开，别人才能用这条命令安装。
+仓库需保持 GitHub 公开，别人才能用这条命令安装。
 
-### 作为项目 Skill 放到某个仓库里
+### 手动放到 skills 目录
 
-把本仓库内容放到目标项目的 `.cursor/skills/testcase-design/`，只有打开该项目时才会加载。
+把本仓库内容放到 `~/.agents/skills/testcase-design/`，新开一轮对话后即可被发现。
 
 目录必须包含 `SKILL.md`：
 
@@ -53,7 +53,7 @@ testcase-design/
     └── validate_testcase.py        # 产物结构自检；--fix-bom 给 CSV 补 BOM
 ```
 
-安装后新开一轮对话（或确认 Cursor 已刷新 skills）。触发词示例：「写测试用例」「按这个需求出用例」「把 PRD 转成用例」「只要测试要点」。即使用户只说「写用例」「出个用例」「按这个需求测一下」且没提 XMind/Excel，Agent 也应使用本 skill。
+安装后新开一轮对话（或确认 Agent 已刷新 skills）。触发词示例：「写测试用例」「按这个需求出用例」「把 PRD 转成用例」「只要测试要点」。即使用户只说「写用例」「出个用例」「按这个需求测一下」且没提 XMind/Excel，Agent 也应使用本 skill。
 
 ---
 
