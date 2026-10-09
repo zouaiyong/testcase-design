@@ -33,8 +33,6 @@ EXPECTED = "预期结果"
 EXPECTED_LIKE = re.compile(r"^(预期|期望)(结果)?[：:]?$|^结果[：:]?$")
 PRI_MARK = re.compile(r"【(高|中|低)】\s*$")
 STEP_TITLES = {"测试步骤：", "测试步骤"}
-FORMULA_WORDS = re.compile(r"等于|乘以|(?<![删排去剔扣免清解移拆消撤])除以")
-FORMULA_MSG = "计算公式用数学符号（= × ÷ ≥ 等），不写「等于」「乘以」「除以」"
 TITLE_MAX_CJK = 25
 PRI_RANK = {"高": 0, "中": 1, "低": 2}
 FORMULA_PREFIX = ("=", "+", "-", "@")
@@ -147,8 +145,6 @@ def validate_csv(path, results):
     results.append((not empty, f"前置条件/测试步骤/预期结果均非空（异常：{empty[:3]}）"))
     bad_dim = sorted({r[2].strip() for _, r in ok10} - set(STD_DIMS))
     results.append((not bad_dim, f"验证维度均为 11 个标准名（异常：{bad_dim}）"))
-    wordy = [label(i, r) for i, r in ok10 if any(FORMULA_WORDS.search(c) for c in r)]
-    results.append((not wordy, f"{FORMULA_MSG}（{len(wordy)} 行，例：{wordy[:3]}）"))
 
     empty_mod = [f"第{i}行" for i, r in ok10 if not r[0].strip() or not r[1].strip()]
     results.append((not empty_mod, f"功能模块/功能测试点非空（异常：{empty_mod[:3]}）"))
@@ -311,9 +307,6 @@ def validate_xmind(text, results):
 
     results.append(("前置条件" not in text and "测试步骤" not in text,
                     "XMind 用例不含前置条件/测试步骤（要前置/步骤走 Excel）"))
-
-    wordy = [ln.strip()[:40] for ln in lines if FORMULA_WORDS.search(ln)]
-    results.append((not wordy, f"{FORMULA_MSG}（{len(wordy)} 处，例：{wordy[:3]}）"))
 
 
 def validate_testpoint(text, results):
