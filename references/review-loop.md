@@ -1,6 +1,6 @@
 # 生成-评审闭环：落盘规范、提示词模板与修复原则
 
-仅 XMind / Excel 生成任务使用。流程步骤与轮次上限以 `SKILL.md` 第三节为准；本文件给落盘规范、子 agent 提示词模板、修复原则与 STATE 模板。派生前把 `<skill根目录>` 替换为 SKILL.md 所在目录的绝对路径；子 agent 的 cwd 不在 skill 目录，`references/`、`scripts/` 必须用绝对路径。
+XMind / Excel 生成任务使用；评审已有用例时，主 agent 也按本文件第三节「初评」模板执行（差异见 `SKILL.md` 第二节）。流程步骤与轮次上限以 `SKILL.md` 第三节为准；本文件给落盘规范、子 agent 提示词模板、修复原则与 STATE 模板。派生前把 `<skill根目录>` 替换为 SKILL.md 所在目录的绝对路径；子 agent 的 cwd 不在 skill 目录，`references/`、`scripts/` 必须用绝对路径。
 
 ---
 
