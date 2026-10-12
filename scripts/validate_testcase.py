@@ -6,12 +6,12 @@
     python scripts/validate_testcase.py --fix-bom <csv>     # 给 CSV 补 UTF-8 BOM
 
 只接受 .csv / .md；.xlsx / .xmind 请先另存为 CSV / Markdown。自动识别产物类型：
-- .csv                → Excel 完整版合同（10 列 / BOM / 优先级 / 实际结果 / 标题 ≤25 汉字且不含 TC·P0 与【高/中/低】 /
-                        功能模块与功能测试点非空且测试点不是维度名 / 字段不以 = + - @ 开头 / 步骤每行带序号 /
-                        排列：模块、功能点连续，块内维度按 2.2 顺序、同维度高优先级在前）
-- .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 无 TC 与（P0） / 标题行末【高/中/低】 /
-                        标题 ≤25 汉字（不含优先级标记） / 标题无 ** 与反引号、行尾无空格 / 只有标题和 - 明细 /
-                        - 明细只在「预期结果」「范围声明」下 / 范围声明至多一处、在模块前、只含 - 明细 /
+- .csv                → Excel 完整版合同（11 列 / 首列用例编号 TC-#### 且自增唯一 / BOM / 优先级 / 实际结果 /
+                        用例标题 ≤25 汉字且不含 TC·P0 与【高/中/低】 / 功能模块与功能测试点非空且测试点不是维度名 /
+                        字段不以 = + - @ 开头 / 步骤每行带序号 / 排列：模块、功能点连续，块内维度按 2.2 顺序、同维度高优先级在前）
+- .md 含「预期结果」标题 → XMind 用例（层级不跳级 / 无维度节点 / 标题以 TC-#### 开头且自增唯一 / 无（P0） /
+                        标题行末【高/中/低】 / 标题正文 ≤25 汉字（不含编号与优先级标记） / 标题无 ** 与反引号、行尾无空格 /
+                        只有标题和 - 明细 / - 明细只在「预期结果」「范围声明」下 / 范围声明至多一处、在模块前、只含 - 明细 /
                         用例下只挂一个「预期结果」且有明细 / 每个模块、功能点下至少一条用例 /
                         同一功能点不混用有分组和无分组；不得含「测试步骤」「前置条件」）
 - .md 不含「预期结果」标题 → 测试要点（一个 # / 不跳级 / 层级到 #### / 要点行【高/中/低】 / 非步骤化 /
@@ -27,11 +27,14 @@ import sys
 
 STD_DIMS = ["功能测试", "边界测试", "异常测试", "权限测试", "安全测试", "数据一致性测试",
             "并发测试", "集成测试", "性能测试", "兼容性测试", "用户体验测试"]
-CSV_HEADER = ["功能模块", "功能测试点", "验证维度", "用例标题", "优先级",
+CSV_HEADER = ["用例编号", "功能模块", "功能测试点", "验证维度", "用例标题", "优先级",
               "前置条件", "测试步骤", "预期结果", "实际结果", "备注"]
 EXPECTED = "预期结果"
 EXPECTED_LIKE = re.compile(r"^(预期|期望)(结果)?[：:]?$|^结果[：:]?$")
 PRI_MARK = re.compile(r"【(高|中|低)】\s*$")
+TC_ID_RE = re.compile(r"^TC-\d{4}$")
+TC_TITLE_PREFIX = re.compile(r"^TC-\d{4}\s+")
+TC_PREFIX_SUB = re.compile(r"^TC-\d{4}\s*")
 STEP_TITLES = {"测试步骤：", "测试步骤"}
 TITLE_MAX_CJK = 25
 PRI_RANK = {"高": 0, "中": 1, "低": 2}
@@ -46,6 +49,7 @@ def cjk_len(s):
 
 
 def title_body(s):
+    s = TC_PREFIX_SUB.sub("", s)
     return PRI_MARK.sub("", s).rstrip()
 
 
@@ -121,49 +125,72 @@ def validate_csv(path, results):
     if not rows:
         results.append((False, "文件为空或无数据行"))
         return
-    results.append((rows[0] == CSV_HEADER, f"表头为固定 10 列且顺序正确（实际：{rows[0]}）"))
+    results.append((rows[0] == CSV_HEADER, f"表头为固定 11 列且顺序正确（实际：{rows[0]}）"))
     data = rows[1:]
-    bad_len = [i for i, r in enumerate(data, start=2) if len(r) != 10]
-    results.append((not bad_len, f"每行 10 个字段（异常行：{bad_len[:3]}）"))
-    ok10 = [(i, r) for i, r in enumerate(data, start=2) if len(r) == 10]
+    bad_len = [i for i, r in enumerate(data, start=2) if len(r) != 11]
+    results.append((not bad_len, f"每行 11 个字段（异常行：{bad_len[:3]}）"))
+    ok11 = [(i, r) for i, r in enumerate(data, start=2) if len(r) == 11]
 
     def label(i, r):
-        return r[3].strip() or f"第{i}行"
+        cid = r[0].strip()
+        title = r[4].strip()
+        if cid and title:
+            return f"{cid} {title}"
+        return cid or title or f"第{i}行"
 
-    bad_pri = [label(i, r) for i, r in ok10 if r[4].strip() not in ("高", "中", "低")]
+    bad_tc = [f"第{i}行「{r[0].strip()}」" for i, r in ok11 if not TC_ID_RE.match(r[0].strip())]
+    results.append((not bad_tc, f"用例编号格式为 TC-####（如 TC-0001）（异常：{bad_tc[:3]}）"))
+
+    seen_ids = set()
+    dup_ids = []
+    for i, r in ok11:
+        cid = r[0].strip()
+        if cid in seen_ids:
+            dup_ids.append(f"第{i}行「{cid}」")
+        seen_ids.add(cid)
+    results.append((not dup_ids, f"用例编号唯一无重复（异常：{dup_ids[:3]}）"))
+
+    non_seq = []
+    for idx, (i, r) in enumerate(ok11, start=1):
+        expected_id = f"TC-{idx:04d}"
+        if r[0].strip() != expected_id:
+            non_seq.append(f"第{i}行「{r[0].strip()}」期望「{expected_id}」")
+    results.append((not non_seq, f"用例编号自 TC-0001 起连续递增（异常：{non_seq[:3]}）"))
+
+    bad_pri = [label(i, r) for i, r in ok11 if r[5].strip() not in ("高", "中", "低")]
     results.append((not bad_pri, f"优先级只有 高/中/低（异常：{bad_pri[:3]}）"))
-    bad_act = [label(i, r) for i, r in ok10 if r[8].strip() not in ("—",)]
+    bad_act = [label(i, r) for i, r in ok11 if r[9].strip() not in ("—",)]
     results.append((not bad_act, f"实际结果列填 —（异常：{bad_act[:3]}）"))
-    empty_title = [f"第{i}行" for i, r in ok10 if not r[3].strip()]
+    empty_title = [f"第{i}行" for i, r in ok11 if not r[4].strip()]
     results.append((not empty_title, f"用例标题非空（异常：{empty_title[:3]}）"))
-    titled_tc = [label(i, r) for i, r in ok10
-                 if re.search(r"TC\d", r[3]) or re.search(r"（P[012]）", r[3])]
-    results.append((not titled_tc, f"标题不含 TC 编号或（P0/P1/P2）（异常：{titled_tc[:3]}）"))
-    over = [f"{label(i, r)}({cjk_len(r[3])}字)" for i, r in ok10 if cjk_len(r[3]) > TITLE_MAX_CJK]
+    titled_tc = [label(i, r) for i, r in ok11
+                 if re.search(r"TC\d", r[4]) or re.search(r"（P[012]）", r[4])]
+    results.append((not titled_tc, f"标题列不含 TC 编号或（P0/P1/P2）（异常：{titled_tc[:3]}）"))
+    over = [f"{label(i, r)}({cjk_len(r[4])}字)" for i, r in ok11 if cjk_len(r[4]) > TITLE_MAX_CJK]
     results.append((not over, f"用例标题 ≤{TITLE_MAX_CJK} 个汉字（超长：{over[:3]}）"))
-    empty = [label(i, r) for i, r in ok10 if not r[5].strip() or not r[6].strip() or not r[7].strip()]
+    empty = [label(i, r) for i, r in ok11 if not r[6].strip() or not r[7].strip() or not r[8].strip()]
     results.append((not empty, f"前置条件/测试步骤/预期结果均非空（异常：{empty[:3]}）"))
-    bad_dim = sorted({r[2].strip() for _, r in ok10} - set(STD_DIMS))
+    bad_dim = sorted({r[3].strip() for _, r in ok11} - set(STD_DIMS))
     results.append((not bad_dim, f"验证维度均为 11 个标准名（异常：{bad_dim}）"))
 
-    empty_mod = [f"第{i}行" for i, r in ok10 if not r[0].strip() or not r[1].strip()]
+    empty_mod = [f"第{i}行" for i, r in ok11 if not r[1].strip() or not r[2].strip()]
     results.append((not empty_mod, f"功能模块/功能测试点非空（异常：{empty_mod[:3]}）"))
-    dim_as_point = [label(i, r) for i, r in ok10 if r[1].strip() in STD_DIMS]
+    dim_as_point = [label(i, r) for i, r in ok11 if r[2].strip() in STD_DIMS]
     results.append((not dim_as_point, f"功能测试点不填维度名（异常：{dim_as_point[:3]}）"))
-    pri_in_title = [label(i, r) for i, r in ok10 if PRI_MARK.search(r[3])]
-    results.append((not pri_in_title, f"标题列不带【高/中/低】，优先级只在第 5 列（异常：{pri_in_title[:3]}）"))
-    bad_formula = [f"{label(i, r)}:第{k + 1}列" for i, r in ok10
+    pri_in_title = [label(i, r) for i, r in ok11 if PRI_MARK.search(r[4])]
+    results.append((not pri_in_title, f"标题列不带【高/中/低】，优先级只在第 6 列（异常：{pri_in_title[:3]}）"))
+    bad_formula = [f"{label(i, r)}:第{k + 1}列" for i, r in ok11
                    for k, c in enumerate(r) if c.strip()[:1] in FORMULA_PREFIX]
     results.append((not bad_formula, f"字段不以 = + - @ 开头，Excel 会当公式（异常：{bad_formula[:3]}）"))
-    bad_steps = [label(i, r) for i, r in ok10
-                 if any(ln.strip() and not STEP_NUM.match(ln) for ln in r[6].splitlines())]
+    bad_steps = [label(i, r) for i, r in ok11
+                 if any(ln.strip() and not STEP_NUM.match(ln) for ln in r[7].splitlines())]
     results.append((not bad_steps, f"测试步骤每行带序号（异常：{bad_steps[:3]}）"))
 
     order_bad, seen_mod, seen_pt = [], set(), set()
     prev_mod = prev_key = None
     prev_rank = (-1, -1)
-    for i, r in ok10:
-        mod, pt, dim, pri = r[0].strip(), r[1].strip(), r[2].strip(), r[4].strip()
+    for i, r in ok11:
+        mod, pt, dim, pri = r[1].strip(), r[2].strip(), r[3].strip(), r[5].strip()
         key = (mod, pt)
         if mod != prev_mod:
             if mod in seen_mod:
@@ -176,7 +203,7 @@ def validate_csv(path, results):
             prev_rank = (-1, -1)
         rank = (STD_DIMS.index(dim) if dim in STD_DIMS else 99, PRI_RANK.get(pri, 9))
         if rank < prev_rank:
-            order_bad.append(f"第{i}行 「{r[3].strip()[:20]}」维度/优先级顺序")
+            order_bad.append(f"第{i}行 「{r[4].strip()[:20]}」维度/优先级顺序")
         prev_rank, prev_mod, prev_key = rank, mod, key
     results.append((not order_bad, f"排列：模块、功能点连续，块内维度按 2.2 顺序、同维度高优先级在前（异常：{order_bad[:3]}）"))
 
@@ -229,16 +256,40 @@ def validate_xmind(text, results):
         _, _, t = headings[i]
         if t.rstrip("：") == EXPECTED or t in STEP_TITLES or t == "范围声明" or t in STD_DIMS:
             bad_case.append(t[:40])
-        elif re.search(r"TC\s*\d", t) or re.search(r"（P[012]）", t):
+        elif re.search(r"（P[012]）", t):
             bad_case.append(t[:40])
-    results.append((not bad_case, f"用例标题不含 TC 编号、（P0）或维度名（异常：{bad_case[:3]}）"))
+    results.append((not bad_case, f"用例标题不含（P0/P1/P2）或维度名（异常：{bad_case[:3]}）"))
+
+    missing_tc_id = [headings[i][2][:40] for i in cases if not TC_TITLE_PREFIX.match(headings[i][2])]
+    results.append((not missing_tc_id, f"用例标题以 TC-#### 编号开头（缺失：{missing_tc_id[:3]}）"))
+
+    xmind_tc_ids = []
+    for i in cases:
+        m = re.match(r"^(TC-\d{4})\s+", headings[i][2])
+        if m:
+            xmind_tc_ids.append((i, m.group(1), headings[i][2]))
+
+    seen_xmind_ids = set()
+    dup_xmind = []
+    for _, cid, title in xmind_tc_ids:
+        if cid in seen_xmind_ids:
+            dup_xmind.append(f"「{title[:30]}」")
+        seen_xmind_ids.add(cid)
+    results.append((not dup_xmind, f"用例编号唯一无重复（异常：{dup_xmind[:3]}）"))
+
+    non_seq_xmind = []
+    for idx, (_, cid, title) in enumerate(xmind_tc_ids, start=1):
+        expected_id = f"TC-{idx:04d}"
+        if cid != expected_id:
+            non_seq_xmind.append(f"「{title[:25]}」实际「{cid}」期望「{expected_id}」")
+    results.append((not non_seq_xmind, f"用例编号自 TC-0001 起连续递增（异常：{non_seq_xmind[:3]}）"))
 
     missing_pri = [t[:40] for i in cases for _, _, t in [headings[i]] if not PRI_MARK.search(t)]
     results.append((not missing_pri, f"用例标题行末【高/中/低】（缺失：{missing_pri[:3]}）"))
 
     over = [f"{t}({cjk_len(title_body(t))}字)" for i in cases for _, _, t in [headings[i]]
             if cjk_len(title_body(t)) > TITLE_MAX_CJK]
-    results.append((not over, f"用例标题 ≤{TITLE_MAX_CJK} 个汉字（不含优先级标记）（超长：{over[:3]}）"))
+    results.append((not over, f"用例标题 ≤{TITLE_MAX_CJK} 个汉字（不含编号与优先级标记）（超长：{over[:3]}）"))
 
     h_expected = [t for _, _, t in headings if EXPECTED_LIKE.match(t)]
     bad_exp_name = [t for t in h_expected if t != EXPECTED]
